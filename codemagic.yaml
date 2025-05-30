@@ -8,11 +8,11 @@ workflows:
       groups:
       - cm_credentials  # grupo de credenciais configurado na UI (keystore)
         # - google_play_credentials  # descomente se usar Play Store
-      vars:
-        CM_KEYSTORE_PASSWORD: lidcloned
-        CM_KEY_ALIAS: Minhachaveappl
-        CM_KEY_PASSWORD: lidcloned
-        GOOGLE_SERVICES_JSON: "Encrypted(...)"  # apenas se for usar como variável segura
+      # vars:
+       # CM_KEYSTORE_PASSWORD: lidcloned
+      #  CM_KEY_ALIAS: Minhachaveappl
+      #  CM_KEY_PASSWORD: lidcloned
+       # GOOGLE_SERVICES_JSON: "Encrypted(...)"  # apenas se for usar como variável segura
 
     scripts:
       - name: Set up local properties
