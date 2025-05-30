@@ -1,0 +1,68 @@
+name: lamafia
+description: 'Aplicativo LAMAFIA: Comunicação e organização para o clã.'
+publish_to: 'none' # Prevent accidental publishing to pub.dev
+version: 2.0.0+1 # Increment version for new features
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Firebase (Dependências essenciais atualizadas)
+  firebase_core: ^3.13.1
+  firebase_auth: ^5.5.4
+  cloud_firestore: ^5.6.8
+  firebase_storage: ^12.4.6
+  firebase_messaging: ^15.1.1 # Adicionado para notificações
+
+  # Estado e armazenamento (Atualizado)
+  provider: ^6.1.2
+  shared_preferences: ^2.5.3
+
+  # UI e formatação (Atualizado)
+  intl: ^0.20.2
+  flutter_svg: ^2.0.10+1
+
+  # Funcionalidades Adicionadas (Atualizadas)
+  image_picker: ^1.1.2
+  permission_handler: ^12.0.0+1
+
+  # WebRTC e Sinalização (Substituindo Agora.io)
+  flutter_webrtc: ^0.9.47
+  socket_io_client: ^2.0.3+1
+  uuid: ^4.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images_png/1000216621.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/images_png/1000216621.png"
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images_png/
+    - assets/audio/
+    - assets/fonts/
+    # - assets/images_svg/ # Descomentar se usar SVGs
+    # - assets/images_placeholders/ # Remover ou usar para assets reais
+
+  fonts:
+    - family: Gothic
+      fonts:
+        - asset: assets/fonts/gothic.ttf
+    - family: Digital
+      fonts:
+        - asset: assets/fonts/digital.ttf
+

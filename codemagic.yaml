@@ -1,0 +1,28 @@
+workflows:
+  lamafia-android-apk:
+    name: Lamafia Android APK Build (Debug)
+    # instance_type: linux_x2
+
+    environment:
+      flutter: stable
+      # Removido grupo de credenciais, não é necessário para build debug
+      
+    scripts:
+      - name: Set up local properties
+        script: |
+          echo "flutter.sdk=$FLUTTER_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+
+      # O google-services.json já está incluído no projeto
+      # Não é necessário decodificar de variável de ambiente
+
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+
+      - name: Build Android APK (Debug)
+        script: |
+          flutter clean
+          flutter build apk --debug
+
+    artifacts:
+      - build/app/outputs/flutter-apk/app-debug.apk
