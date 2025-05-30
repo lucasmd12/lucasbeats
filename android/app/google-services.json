@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "870531430015",
+    "firebase_url": "https://federacaomad-dbec9-default-rtdb.firebaseio.com",
+    "project_id": "federacaomad-dbec9",
+    "storage_bucket": "federacaomad-dbec9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:870531430015:android:3d26638dbfdba0846db14a",
+        "android_client_info": {
+          "package_name": "com.federacaomad.cla"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "870531430015-ddlvbg6goh97ttklmspvqaos6rq2hdin.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.federacaomad.cla",
+            "certificate_hash": "604bb42ea3011a494da035a3c8b3197482ffecac"
+          }
+        },
+        {
+          "client_id": "870531430015-nr35aiksi5pt4ac1vdgdti2uuhju6qrd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5EWmHPKAWQiBww6fH9HlVOFeR6WW1Htc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "870531430015-nr35aiksi5pt4ac1vdgdti2uuhju6qrd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

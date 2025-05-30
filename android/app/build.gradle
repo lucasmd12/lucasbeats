@@ -1,0 +1,151 @@
+// Added comment to force update check - 29/05/2025
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services" // Adicionado plugin do Google Services
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('../local.properties') // Adjusted path relative to app module
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+// Read keystore properties
+def keyProperties = new Properties()
+def keyPropertiesFile = rootProject.file('android/key.properties') // Path relative to root project
+if (keyPropertiesFile.exists()) {
+    keyProperties.load(new FileInputStream(keyPropertiesFile))
+}
+
+def getPubspecVersionInfo() {
+    def pubspecFile = rootProject.file("../pubspec.yaml") // Path relative to app module
+    if (!pubspecFile.exists()) {
+        throw new GradleException("File not found: ${pubspecFile.absolutePath}")
+    }
+    def pubspecContent = pubspecFile.text
+    def versionLine = pubspecContent.readLines().find { it.startsWith("version:") }
+    if (versionLine == null) {
+        throw new GradleException("Missing 'version:' line in pubspec.yaml")
+    }
+    // Regex to match 'X.Y.Z+B' format
+    def matcher = versionLine =~ /version:\s*(\d+\.\d+\.\d+)\+(\d+)/
+    if (!matcher.find()) {
+        // Fallback regex for 'X.Y.Z' format if no build number is present
+        matcher = versionLine =~ /version:\s*(\d+\.\d+\.\d+)/
+        if (!matcher.find()) {
+             throw new GradleException("Invalid 'version:' format in pubspec.yaml. Expected 'X.Y.Z+B' or 'X.Y.Z'. Found: ${versionLine}")
+        }
+        // If only X.Y.Z is found, use 1 as default build number
+        return [name: matcher.group(1), code: 1]
+    }
+    return [name: matcher.group(1), code: matcher.group(2).toInteger()]
+}
+
+def versionInfo = getPubspecVersionInfo()
+
+android {
+    namespace "com.federacaomad.cla"
+    compileSdk 35
+    ndkVersion "25.1.8937393"
+
+    // Define signing configurations
+    signingConfigs {
+    release {
+        if (keyPropertiesFile.exists()) {
+            // Validate required properties exist and are not empty
+            def storeFilePath = keyProperties["storeFile"]
+            def storePassword = keyProperties["storePassword"]
+            def keyAlias = keyProperties["keyAlias"]
+            def keyPassword = keyProperties["keyPassword"]
+
+            if (storeFilePath == null || storeFilePath.trim().isEmpty()) {
+                throw new GradleException("storeFile path is missing or empty in key.properties. Ensure CM_KEYSTORE_PATH is set correctly in Codemagic.")
+            }
+            if (storePassword == null || storePassword.isEmpty()) {
+                throw new GradleException("storePassword is missing or empty in key.properties.")
+            }
+            if (keyAlias == null || keyAlias.isEmpty()) {
+                throw new GradleException("keyAlias is missing or empty in key.properties.")
+            }
+            if (keyPassword == null || keyPassword.isEmpty()) {
+                throw new GradleException("keyPassword is missing or empty in key.properties.")
+            }
+
+            // Use validated properties
+            storeFile file(storeFilePath)
+            storePassword storePassword
+            keyAlias keyAlias
+            keyPassword keyPassword
+        } else {
+            throw new GradleException("key.properties not found. Release builds require signing configuration.")
+        }
+    }
+}
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId "com.federacaomad.cla"
+        minSdkVersion 24
+        targetSdkVersion 35
+        versionCode versionInfo.code
+        versionName versionInfo.name
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        release {
+            // Use the release signing configuration
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            shrinkResources false
+            ndk {
+                abiFilters 'armeabi-v7a', 'arm64-v8a'
+            }
+        }
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22"
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test:runner:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+}
+
