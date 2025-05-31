@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:permission_handler/permission_handler.dart'; // Import permission_handler
 import '../utils/logger.dart';
 import '../widgets/custom_snackbar.dart';
-import '../models/user_model.dart'; // Assuming UserModel exists
+import '../models/user_model.dart'; // Import UserModel
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -17,7 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _displayNameController = TextEditingController(); // Added for display name
+  final _displayNameController = TextEditingController(); // Controller for user's display name
   bool _isLoading = false;
 
   @override
@@ -27,6 +28,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _confirmPasswordController.dispose();
     _displayNameController.dispose();
     super.dispose();
+  }
+
+  // Function to request permissions after registration
+  Future<void> _requestPermissionsAfterRegister() async {
+    Logger.info("Requesting permissions after registration...");
+    await Permission.notification.request();
+    await Permission.storage.request();
+    await Permission.microphone.request();
+    Logger.info("Initial permission requests completed.");
   }
 
   Future<void> _handleRegister() async {
@@ -48,35 +58,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
       Logger.info('Auth user created successfully: ${credential.user?.uid}');
 
       if (credential.user != null) {
-        // 2. Update display name in Firebase Auth (optional but good practice)
-        await credential.user!.updateDisplayName(_displayNameController.text.trim());
-        Logger.info('Auth display name updated.');
+        final userId = credential.user!.uid;
+        final userEmail = _emailController.text.trim();
+        final userName = _displayNameController.text.trim(); // Get name from controller
 
-        // 3. Create user document in Firestore
+        // 2. Update display name in Firebase Auth
+        try {
+          await credential.user!.updateDisplayName(userName);
+          Logger.info('Auth display name updated.');
+        } catch (e) {
+          Logger.error('Failed to update Auth display name', error: e);
+        }
+
+        // 3. Create user document in Firestore using UserModel
+        Logger.info('Attempting to create Firestore document for user: $userId');
         final newUser = UserModel(
-          uid: credential.user!.uid,
-          email: _emailController.text.trim(),
-          displayName: _displayNameController.text.trim(),
-          photoUrl: null, // Set default or allow upload later
-          role: 'recruta', // Default role for new users
-          clanId: null, // Assign later or based on invite
-          createdAt: Timestamp.now(),
+          uid: userId,
+          username: userName, // Corrected: Use 'username' field from UserModel
+          email: userEmail,
+          fotoUrl: null, // Default photoUrl
+          role: 'recruta', // Corrected: Use 'role' field, set default role
+          clanId: null,
+          canalVozAtual: null,
+          online: false,
+          ultimoPing: Timestamp.now(), // Set initial ping time
+          fcmTokens: [], // Initialize empty list
         );
 
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(credential.user!.uid)
-            .set(newUser.toJson());
-        Logger.info('Firestore user document created for: ${credential.user!.uid}');
+        // Use the toMap method to get the Map for Firestore
+        try {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .set(newUser.toMap()); // Corrected: Use toMap() method
+          Logger.info('Firestore user document created successfully for: $userId');
+        } on FirebaseException catch (firestoreError) {
+           Logger.error('Firestore document creation failed', error: firestoreError, stackTrace: firestoreError.stackTrace);
+           try { await credential.user!.delete(); Logger.warning('Auth user $userId deleted due to Firestore failure.'); } catch (_) {}
+           throw Exception('Falha ao salvar dados no banco de dados: ${firestoreError.message}');
+        } catch (otherError, stackTrace) {
+           Logger.error('Firestore document creation failed (Unknown Error)', error: otherError, stackTrace: stackTrace);
+           try { await credential.user!.delete(); Logger.warning('Auth user $userId deleted due to Firestore failure.'); } catch (_) {}
+           throw Exception('Falha ao salvar dados no banco de dados (Erro desconhecido).');
+        }
 
+        // 4. Request Permissions
+        await _requestPermissionsAfterRegister();
+
+        // 5. Show success and navigate
         if (mounted) {
           CustomSnackbar.showSuccess(context, 'Conta criada com sucesso! Faça o login.');
-          // Navigate back to login after successful registration
-          Navigator.pop(context);
+          Navigator.pop(context); // Go back to login
         }
       }
     } on FirebaseAuthException catch (e) {
-      Logger.error('Firebase Registration Failed', error: e);
+      Logger.error('Firebase Auth Registration Failed', error: e);
       String errorMessage = 'Ocorreu um erro ao criar a conta.';
       if (e.code == 'weak-password') {
         errorMessage = 'A senha fornecida é muito fraca.';
@@ -84,6 +120,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         errorMessage = 'Este email já está em uso.';
       } else if (e.code == 'invalid-email') {
         errorMessage = 'O formato do email é inválido.';
+      } else {
+        errorMessage = 'Erro de autenticação: ${e.message}';
       }
       if (mounted) {
         CustomSnackbar.showError(context, errorMessage);
@@ -91,7 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e, stackTrace) {
       Logger.error('Generic Registration Failed', error: e, stackTrace: stackTrace);
       if (mounted) {
-        CustomSnackbar.showError(context, 'Ocorreu um erro inesperado.');
+        CustomSnackbar.showError(context, e.toString().replaceFirst('Exception: ', ''));
       }
     } finally {
       if (mounted) {
@@ -123,17 +161,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Title
                   Text(
-                    'Crie sua conta LAMAFIA',
+                    'Crie sua conta FEDERACAO MADOUT', // Updated Text
                     textAlign: TextAlign.center,
                     style: textTheme.headlineMedium?.copyWith(color: Colors.white),
                   ),
                   const SizedBox(height: 32),
-
-                  // Display Name Field
                   TextFormField(
-                    controller: _displayNameController,
+                    controller: _displayNameController, // Use the correct controller
                     style: const TextStyle(color: Colors.white, fontFamily: 'Gothic'),
                     decoration: const InputDecoration(
                       labelText: 'Nome de Exibição',
@@ -147,8 +182,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-
-                  // Email Field
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -161,15 +194,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Por favor, insira seu email';
                       }
-                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value)) {
                         return 'Por favor, insira um email válido';
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
-
-                  // Password Field
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
@@ -189,8 +220,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-
-                  // Confirm Password Field
                   TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: true,
@@ -210,8 +239,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 32),
-
-                  // Register Button
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleRegister,
                     child: _isLoading
@@ -226,8 +253,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         : const Text('CRIAR CONTA'),
                   ),
                   const SizedBox(height: 16),
-
-                  // Back to Login Link
                   TextButton(
                     onPressed: _isLoading ? null : () {
                       Navigator.pop(context);

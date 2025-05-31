@@ -1,4 +1,4 @@
-package com.lamafia.cla
+package com.federacaomad.cla
 
 import io.flutter.embedding.android.FlutterActivity
 

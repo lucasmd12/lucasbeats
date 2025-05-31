@@ -26,6 +26,48 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "audioplayers",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/audioplayers-6.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "audioplayers_android",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/audioplayers_android-5.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "audioplayers_darwin",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/audioplayers_darwin-6.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "audioplayers_linux",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/audioplayers_linux-4.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "audioplayers_platform_interface",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/audioplayers_platform_interface-7.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "audioplayers_web",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/audioplayers_web-5.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "audioplayers_windows",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/audioplayers_windows-4.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "boolean_selector",
       "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/boolean_selector-2.1.2",
       "packageUri": "lib/",
@@ -80,6 +122,18 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "connectivity_plus",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/connectivity_plus-5.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "connectivity_plus_platform_interface",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/connectivity_plus_platform_interface-1.2.4",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "cross_file",
       "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/cross_file-0.3.4+2",
       "packageUri": "lib/",
@@ -102,6 +156,12 @@
       "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/dart_webrtc-1.5.3+hotfix.2",
       "packageUri": "lib/",
       "languageVersion": "3.3"
+    },
+    {
+      "name": "dbus",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/dbus-0.7.11",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
     },
     {
       "name": "fake_async",
@@ -182,6 +242,24 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "firebase_database",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/firebase_database-11.3.6",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_database_platform_interface",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/firebase_database_platform_interface-0.2.6+6",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_database_web",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/firebase_database_web-0.2.6+12",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "firebase_messaging",
       "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/firebase_messaging-15.2.6",
       "packageUri": "lib/",
@@ -225,7 +303,7 @@
     },
     {
       "name": "flutter",
-      "rootUri": "file:///home/ubuntu/flutter/packages/flutter",
+      "rootUri": "file:///home/ubuntu/flutter_sdk/packages/flutter",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -255,21 +333,21 @@
     },
     {
       "name": "flutter_test",
-      "rootUri": "file:///home/ubuntu/flutter/packages/flutter_test",
+      "rootUri": "file:///home/ubuntu/flutter_sdk/packages/flutter_test",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
     {
       "name": "flutter_web_plugins",
-      "rootUri": "file:///home/ubuntu/flutter/packages/flutter_web_plugins",
+      "rootUri": "file:///home/ubuntu/flutter_sdk/packages/flutter_web_plugins",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
     {
       "name": "flutter_webrtc",
-      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/flutter_webrtc-0.9.48+hotfix.1",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/flutter_webrtc-0.14.1",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.3"
     },
     {
       "name": "http",
@@ -412,6 +490,12 @@
     {
       "name": "nested",
       "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/nested-1.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "nm",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/nm-0.5.0",
       "packageUri": "lib/",
       "languageVersion": "2.12"
     },
@@ -573,21 +657,21 @@
     },
     {
       "name": "sky_engine",
-      "rootUri": "file:///home/ubuntu/flutter/bin/cache/pkg/sky_engine",
+      "rootUri": "file:///home/ubuntu/flutter_sdk/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
     {
       "name": "socket_io_client",
-      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/socket_io_client-2.0.3+1",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/socket_io_client-3.1.2",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.0"
     },
     {
       "name": "socket_io_common",
-      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/socket_io_common-2.0.3",
+      "rootUri": "file:///home/ubuntu/.pub-cache/hosted/pub.dev/socket_io_common-3.1.1",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.0"
     },
     {
       "name": "source_span",
@@ -710,15 +794,15 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "lamafia",
+      "name": "federacaomad",
       "rootUri": "../",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.8.0",
-  "flutterRoot": "file:///home/ubuntu/flutter",
-  "flutterVersion": "3.32.0",
+  "generatorVersion": "3.8.1",
+  "flutterRoot": "file:///home/ubuntu/flutter_sdk",
+  "flutterVersion": "3.32.1",
   "pubCache": "file:///home/ubuntu/.pub-cache"
 }

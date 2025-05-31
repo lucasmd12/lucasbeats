@@ -36,11 +36,11 @@ class UserProvider extends ChangeNotifier {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
       if (userDoc.exists) {
-        _user = UserModel.fromJson(userDoc.data() as Map<String, dynamic>);
+        _user = UserModel.fromFirestore(userDoc); // Corrected: Use fromFirestore factory
         Logger.info('User data loaded successfully for: ${_user?.displayName} (${_user?.uid})');
         _isUserDataLoaded = true; // Set flag after successful load
       } else {
-        Logger.warn('Firestore user document not found for UID: $uid. User might need to complete profile or document creation failed.');
+        Logger.warning('Firestore user document not found for UID: $uid. User might need to complete profile or document creation failed.');
         // Handle case where user exists in Auth but not Firestore (e.g., prompt profile setup)
         _user = null; // Ensure user is null if Firestore data is missing
       }
@@ -85,7 +85,7 @@ class UserProvider extends ChangeNotifier {
   // Method to update user data in Firestore (e.g., profile update)
   Future<void> updateUserData(Map<String, dynamic> data) async {
     if (_user == null) {
-      Logger.warn('Cannot update user data: User is not loaded.');
+      Logger.warning('Cannot update user data: User is not loaded.');
       return;
     }
     setLoading(true);

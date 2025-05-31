@@ -1,136 +1,130 @@
-import 'dart:io';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:uuid/uuid.dart';
-import '../models/message_model.dart';
-import '../utils/logger.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
+// Corrigido: Usar barrel files para imports
+import '../models/index.dart'; 
+import '../utils/index.dart'; 
+
+/// Serviço para gerenciar interações com canais de voz e chat no Firestore.
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final ImagePicker _picker = ImagePicker();
-  final Uuid _uuid = const Uuid();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Get message stream for a specific chat
-  Stream<QuerySnapshot> getMessages(String chatId) {
-    return _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .orderBy('timestamp', descending: true)
-        .snapshots();
+  /// Adiciona o usuário ao array 'membros' do canal e atualiza o campo 'canalVozAtual' do usuário.
+  Future<void> entrarNoCanal(String userId, String canalId) async {
+    Logger.info("Entrando no canal: userId=$userId, canalId=$canalId");
+    final userRef = _firestore.collection('users').doc(userId);
+    final canalRef = _firestore.collection('canais').doc(canalId);
+
+    await _firestore.runTransaction((transaction) async {
+      transaction.update(userRef, {
+        'canalVozAtual': canalId, 
+        'online': true,
+        'ultimoPing': FieldValue.serverTimestamp(),
+      });
+      transaction.update(canalRef, {
+        'membros': FieldValue.arrayUnion([userId])
+      });
+    });
+    Logger.info("Usuário $userId adicionado ao canal $canalId e status atualizado.");
   }
 
-  // Send a text message
-  Future<void> sendTextMessage({
-    required String chatId,
-    required String senderId,
-    required String senderName,
-    required String text,
-  }) async {
-    if (text.trim().isEmpty) return; // Don't send empty messages
+  /// Remove o usuário do array 'membros' do canal e limpa o campo 'canalVozAtual' do usuário.
+  Future<void> sairDoCanal(String userId, String canalId) async {
+    Logger.info("Saindo do canal: userId=$userId, canalId=$canalId");
+    final userRef = _firestore.collection('users').doc(userId);
+    final canalRef = _firestore.collection('canais').doc(canalId);
 
-    final messageId = _uuid.v4();
-    final timestamp = Timestamp.now();
+    await _firestore.runTransaction((transaction) async {
+      transaction.update(userRef, {
+        'canalVozAtual': null, 
+        'ultimoPing': FieldValue.serverTimestamp(),
+      });
+      transaction.update(canalRef, {
+        'membros': FieldValue.arrayRemove([userId])
+      });
+    });
+    Logger.info("Usuário $userId removido do canal $canalId e status atualizado.");
+  }
 
-    final newMessage = Message(
-      id: messageId,
-      chatId: chatId,
-      senderId: senderId,
-      senderName: senderName,
-      text: text.trim(),
-      type: MessageType.text,
-      timestamp: timestamp,
+  /// Atualiza o status de presença do usuário (online/offline).
+  Future<void> atualizarStatusPresenca(String userId, bool online) async {
+    final userRef = _firestore.collection('users').doc(userId);
+    try {
+      String? currentChannelId;
+      if (!online) {
+        final userDoc = await userRef.get();
+        final data = userDoc.data();
+        if (data != null && data.containsKey('canalVozAtual')) {
+          currentChannelId = data['canalVozAtual'] as String?;
+        }
+      }
+
+      await userRef.update({
+        'online': online,
+        'ultimoPing': FieldValue.serverTimestamp(),
+        if (!online) 'canalVozAtual': null,
+      });
+      Logger.info("Status de presença do usuário $userId atualizado para: $online");
+
+      if (!online && currentChannelId != null && currentChannelId.isNotEmpty) {
+        final canalRef = _firestore.collection('canais').doc(currentChannelId);
+        try {
+          await canalRef.update({'membros': FieldValue.arrayRemove([userId])});
+          Logger.info("Usuário $userId removido do canal $currentChannelId ao ficar offline.");
+        } catch (e) {
+          Logger.warning("Falha ao remover usuário $userId do canal $currentChannelId ao ficar offline (canal pode ter sido excluído): $e");
+        }
+      }
+    } catch (e) {
+      Logger.warning("Falha ao atualizar status de presença para $userId (pode ser normal se o user doc ainda não existe): $e");
+    }
+  }
+
+  // --- Métodos de Chat --- 
+
+  /// Envia uma mensagem de texto para um canal específico.
+  Future<void> sendMessage(String channelId, String text, UserModel currentUser) async {
+    if (text.trim().isEmpty) {
+      Logger.warning("Tentativa de enviar mensagem vazia.");
+      return;
+    }
+
+    final messageData = MessageModel(
+      id: '', // O ID será gerado pelo Firestore
+      channelId: channelId,
+      senderId: currentUser.uid,
+      senderName: currentUser.username, 
+      senderAvatarUrl: currentUser.fotoUrl, 
+      textContent: text.trim(),
+      type: MessageType.text, 
+      timestamp: Timestamp.now(),
     );
 
     try {
       await _firestore
-          .collection('chats')
-          .doc(chatId)
+          .collection('canais')
+          .doc(channelId)
           .collection('messages')
-          .doc(messageId)
-          .set(newMessage.toJson());
-      Logger.info('Text message sent successfully to chat: $chatId');
-      // Optionally update the last message preview in the chat document
-      await _updateChatPreview(chatId, newMessage);
-    } catch (e, stackTrace) {
-      Logger.error('Failed to send text message', error: e, stackTrace: stackTrace);
-      // Handle error appropriately (e.g., show snackbar)
+          .add(messageData.toFirestore()); 
+      Logger.info("Mensagem enviada por ${currentUser.uid} para o canal $channelId");
+    } catch (e, s) {
+      Logger.error("Erro ao enviar mensagem para o canal $channelId", error: e, stackTrace: s);
+      throw Exception("Falha ao enviar mensagem.");
     }
   }
 
-  // Send an image message
-  Future<void> sendImageMessage({
-    required String chatId,
-    required String senderId,
-    required String senderName,
-    required XFile imageFile,
-  }) async {
-    final messageId = _uuid.v4();
-    final timestamp = Timestamp.now();
-    final fileName = '$messageId-${imageFile.name}';
-    final storageRef = _storage.ref().child('chat_media/$chatId/$fileName');
-
-    try {
-      // 1. Upload image to Firebase Storage
-      Logger.info('Uploading image to Storage: ${storageRef.fullPath}');
-      UploadTask uploadTask = storageRef.putFile(File(imageFile.path));
-      TaskSnapshot snapshot = await uploadTask;
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-      Logger.info('Image uploaded successfully. URL: $downloadUrl');
-
-      // 2. Create message document in Firestore
-      final newMessage = Message(
-        id: messageId,
-        chatId: chatId,
-        senderId: senderId,
-        senderName: senderName,
-        mediaUrl: downloadUrl,
-        type: MessageType.image,
-        timestamp: timestamp,
-      );
-
-      await _firestore
-          .collection('chats')
-          .doc(chatId)
-          .collection('messages')
-          .doc(messageId)
-          .set(newMessage.toJson());
-      Logger.info('Image message sent successfully to chat: $chatId');
-      await _updateChatPreview(chatId, newMessage);
-
-    } catch (e, stackTrace) {
-      Logger.error('Failed to send image message', error: e, stackTrace: stackTrace);
-      // Handle error
-    }
+  /// Retorna um Stream das mensagens de um canal específico, ordenadas por timestamp.
+  Stream<QuerySnapshot> getMessagesStream(String channelId) {
+    return _firestore
+        .collection('canais')
+        .doc(channelId)
+        .collection('messages')
+        .orderBy('timestamp', descending: true) 
+        .limit(50) 
+        .snapshots();
   }
 
-  // Helper to update chat preview (last message, timestamp)
-  Future<void> _updateChatPreview(String chatId, Message lastMessage) async {
-    try {
-      await _firestore.collection('chats').doc(chatId).set({
-        'lastMessage': lastMessage.type == MessageType.text
-            ? lastMessage.text
-            : '[${lastMessage.type.name.capitalize()}]', // e.g., [Image], [Audio]
-        'lastMessageTimestamp': lastMessage.timestamp,
-        'lastSenderName': lastMessage.senderName,
-        // Keep other chat metadata like participants, chat name, etc.
-      }, SetOptions(merge: true)); // Merge to avoid overwriting other fields
-    } catch (e, stackTrace) {
-      Logger.warn('Failed to update chat preview for $chatId', error: e, stackTrace: stackTrace);
-    }
-  }
-
-  // TODO: Implement methods for sending audio/video messages similarly
-  // TODO: Implement methods for creating/managing chat rooms (e.g., getOrCreateChat)
-}
-
-// Helper extension for capitalizing enum names
-extension StringExtension on String {
-  String capitalize() {
-    if (isEmpty) return "";
-    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
-  }
 }
 

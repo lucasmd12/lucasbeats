@@ -267,13 +267,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: CircleAvatar(
                       radius: 60,
                       backgroundColor: const Color(0xFF333333),
-                      backgroundImage: (_photoURL != null && !isUploading) ? NetworkImage(_photoURL!) : null,
-                      child: (_photoURL == null && !isUploading)
-                          ? Text(
-                              _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : 'U',
-                              style: const TextStyle(fontSize: 40, color: Colors.white),
-                            )
-                          : null,
+                      backgroundImage: (_photoURL != null && !isUploading)
+                          ? NetworkImage(_photoURL!)
+                          : const AssetImage('assets/images_png/default_profile_picture.jpg') as ImageProvider, // Use default image
+                      child: null, // Remove text fallback
                     ),
                   ),
                   if (isUploading)

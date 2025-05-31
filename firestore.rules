@@ -1,0 +1,76 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Regra para a coleção 'users'
+    match /users/{userId} {
+      // Permite que um usuário leia e atualize seu próprio documento.
+      // Permite que qualquer usuário autenticado leia outros perfis (necessário para exibir nomes/fotos).
+      allow read: if request.auth != null;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      // Permite a criação apenas se o ID do documento for o mesmo do UID do usuário autenticado.
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Bloqueia exclusão por padrão.
+      allow delete: if false;
+    }
+
+    // Regra para a coleção 'canais'
+    match /canais/{channelId} {
+      // Permite que qualquer usuário autenticado leia informações do canal.
+      allow read: if request.auth != null;
+      // Permite criar/atualizar canais (pode precisar de restrição por role no futuro).
+      allow write: if request.auth != null; // TODO: Restringir escrita a admins/roles específicas?
+      allow delete: if false; // Bloqueia exclusão por padrão
+
+      // Regra para a subcoleção 'messages' dentro de 'canais'
+      match /messages/{messageId} {
+        // Permite que qualquer usuário autenticado leia mensagens.
+        allow read: if request.auth != null;
+        // Permite que um usuário autenticado crie (envie) mensagens.
+        // Valida se o senderId na mensagem corresponde ao UID do usuário autenticado.
+        allow create: if request.auth != null && request.resource.data.senderId == request.auth.uid;
+        // Bloqueia atualização e exclusão de mensagens por padrão.
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    // Regra para a coleção 'clans' (Exemplo - ajustar conforme necessário)
+    match /clans/{clanId} {
+      // Permite leitura para usuários autenticados.
+      allow read: if request.auth != null;
+      // Permite escrita (pode precisar de restrição por role).
+      allow write: if request.auth != null; // TODO: Restringir escrita?
+    }
+
+    // Regra para a coleção 'missions' (Exemplo - ajustar conforme necessário)
+    match /missions/{missionId} {
+      // Permite leitura para usuários autenticados.
+      allow read: if request.auth != null;
+      // Permite escrita (pode precisar de restrição por role).
+      allow write: if request.auth != null; // TODO: Restringir escrita?
+    }
+
+    // Regra para a coleção 'questionnaires' (Exemplo - ajustar conforme necessário)
+    match /questionnaires/{questionnaireId} {
+      // Permite leitura para usuários autenticados.
+      allow read: if request.auth != null;
+      // Permite escrita (pode precisar de restrição por role).
+      allow write: if request.auth != null; // TODO: Restringir escrita?
+
+      // Exemplo de subcoleção 'responses' (se existir)
+      match /responses/{responseId} {
+         allow read: if request.auth != null; // Ou restringir leitura
+         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+         allow update, delete: if false;
+      }
+    }
+
+    // Bloqueia acesso a qualquer outra coleção por padrão
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

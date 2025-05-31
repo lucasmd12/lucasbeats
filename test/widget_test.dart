@@ -8,12 +8,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:lamafiacla/main.dart';
+import 'package:federacaomad/main.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const LAMAFIAApp());
+    await tester.pumpWidget(const FEDERACAOMADApp());
 
     // Verificar se o app carrega sem erros
     expect(find.byType(MaterialApp), findsOneWidget);

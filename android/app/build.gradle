@@ -97,7 +97,18 @@ flutter {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22"
+    implementation platform('com.google.firebase:firebase-bom:33.1.1') // Import the Firebase BoM
+
+    // Add the dependencies for the Firebase products you want to use
+    // When using the BoM, don't specify versions in Firebase dependencies
+    implementation 'com.google.firebase:firebase-auth-ktx'
+    implementation 'com.google.firebase:firebase-firestore-ktx'
+    implementation 'com.google.firebase:firebase-storage-ktx'
+    implementation 'com.google.firebase:firebase-messaging-ktx'
+    implementation 'com.google.firebase:firebase-config-ktx' // Added for Remote Config
+    implementation 'com.google.firebase:firebase-analytics-ktx' // Added for Analytics (good practice)
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.0"
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.core:core-ktx:1.12.0'
