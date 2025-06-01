@@ -3,7 +3,7 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
-    id "com.google.gms.google-services" // Plugin do Google Services
+
 }
 
 def localProperties = new Properties()
@@ -97,7 +97,8 @@ flutter {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22"
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.0"
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.core:core-ktx:1.12.0'

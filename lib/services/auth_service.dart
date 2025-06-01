@@ -1,181 +1,158 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
-import '../models/user_model.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:federacaomad/services/api_service.dart';
+import 'package:federacaomad/utils/logger.dart';
+import 'package:federacaomad/models/user_model.dart'; // Assuming UserModel exists and matches backend response
 
-class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+class AuthService with ChangeNotifier {
+  final ApiService _apiService = ApiService();
+  final _secureStorage = const FlutterSecureStorage();
 
-  // Obter usuário atual
-  User? get currentUser => _auth.currentUser;
+  User? _currentUser;
+  User? get currentUser => _currentUser;
 
-  // Stream de alterações de autenticação
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  String? _token;
+  String? get token => _token;
 
-  // Registrar com email e senha
-  Future<UserCredential> registerWithEmailAndPassword({
-    required String email,
-    required String password,
-    required String username,
-    required String gameName,
-    required String whatsapp,
-  }) async {
-    try {
-      // Criar usuário no Firebase Auth
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      // Criar perfil do usuário no Firestore
-      await _createUserProfile(
-        uid: result.user!.uid,
-        username: username,
-        email: email,
-        gameName: gameName,
-        whatsapp: whatsapp,
-      );
-      
-      return result;
-    } catch (e) {
-      debugPrint('Erro ao registrar usuário: $e');
-      throw Exception('Falha ao registrar: ${_getErrorMessage(e)}');
-    }
+  bool _isAuthenticated = false;
+  bool get isAuthenticated => _isAuthenticated;
+
+  AuthService() {
+    _tryAutoLogin();
   }
 
-  // Criar perfil do usuário no Firestore
-  Future<void> _createUserProfile({
-    required String uid,
-    required String username,
-    required String email,
-    required String gameName,
-    required String whatsapp,
-  }) async {
-    try {
-      // Verificar se é o primeiro usuário (será o dono)
-      QuerySnapshot usersSnapshot = await _firestore.collection('users').get();
-      String role = usersSnapshot.docs.isEmpty ? 'owner' : 'member';
-      
-      // Data de ingresso
-      String joinDate = DateTime.now().toIso8601String();
-      
-      // Criar modelo de usuário
-      UserModel user = UserModel(
-        uid: uid,
-        username: username,
-        email: email,
-        gameName: gameName,
-        whatsapp: whatsapp,
-        role: role,
-        joinDate: joinDate,
-      );
-      
-      // Salvar no Firestore
-      await _firestore.collection('users').doc(uid).set(user.toMap());
-    } catch (e) {
-      debugPrint('Erro ao criar perfil do usuário: $e');
-      throw Exception('Falha ao criar perfil: ${_getErrorMessage(e)}');
-    }
-  }
-
-  // Login com email e senha
-  Future<UserCredential> signInWithEmailAndPassword({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      return await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } catch (e) {
-      debugPrint('Erro ao fazer login: $e');
-      throw Exception('Falha ao fazer login: ${_getErrorMessage(e)}');
-    }
-  }
-
-  // Logout
-  Future<void> signOut() async {
-    try {
-      return await _auth.signOut();
-    } catch (e) {
-      debugPrint('Erro ao fazer logout: $e');
-      throw Exception('Falha ao fazer logout: ${_getErrorMessage(e)}');
-    }
-  }
-
-  // Obter dados do usuário atual
-  Future<UserModel?> getCurrentUserData() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        DocumentSnapshot doc = await _firestore.collection('users').doc(user.uid).get();
-        if (doc.exists) {
-          return UserModel.fromMap(doc.data() as Map<String, dynamic>);
-        }
+  Future<void> _tryAutoLogin() async {
+    Log.info('Attempting auto-login...');
+    final storedToken = await _secureStorage.read(key: 'jwt_token');
+    if (storedToken != null) {
+      Log.info('Found stored token.');
+      _token = storedToken;
+      try {
+        // Optionally verify token validity by fetching profile
+        await fetchUserProfile(); // This will set _currentUser and _isAuthenticated if successful
+        Log.info('Auto-login successful.');
+      } catch (e) {
+        Log.warning('Auto-login failed: Token validation error or expired. ${e.toString()}');
+        await logout(); // Clear invalid token
       }
-      return null;
-    } catch (e) {
-      debugPrint('Erro ao obter dados do usuário: $e');
-      throw Exception('Falha ao obter dados do usuário: ${_getErrorMessage(e)}');
+    } else {
+      Log.info('No stored token found.');
+      _isAuthenticated = false;
+      notifyListeners();
     }
   }
 
-  // Atualizar perfil do usuário
-  Future<void> updateUserProfile(UserModel user) async {
+  Future<bool> login(String username, String password) async {
     try {
-      await _firestore.collection('users').doc(user.uid).update(user.toMap());
+      final response = await _apiService.post(
+        '/api/auth/login',
+        {'username': username, 'password': password},
+        requireAuth: false, // Login doesn't require prior auth
+      );
+
+      if (response != null && response['token'] != null) {
+        _token = response['token'];
+        await _secureStorage.write(key: 'jwt_token', value: _token);
+        // Assuming the response also contains user details
+        _currentUser = User.fromJson(response); // Adapt User.fromJson if needed
+        _isAuthenticated = true;
+        Log.info('Login successful for user: ${currentUser?.username}');
+        notifyListeners();
+        return true;
+      } else {
+        Log.error('Login failed: Invalid response format or missing token.');
+        _handleAuthError();
+        return false;
+      }
     } catch (e) {
-      debugPrint('Erro ao atualizar perfil: $e');
-      throw Exception('Falha ao atualizar perfil: ${_getErrorMessage(e)}');
+      Log.error('Login error: ${e.toString()}');
+      _handleAuthError();
+      // Rethrow or handle specific error messages for UI
+      throw Exception('Login failed: ${e.toString()}');
     }
   }
 
-  // Verificar se o usuário é administrador ou dono
-  Future<bool> isAdminOrOwner() async {
+  Future<bool> register(String username, String password) async {
     try {
-      UserModel? user = await getCurrentUserData();
-      return user != null && (user.role == 'admin' || user.role == 'owner');
+      final response = await _apiService.post(
+        '/api/auth/register',
+        {'username': username, 'password': password},
+        requireAuth: false, // Registration doesn't require prior auth
+      );
+
+      if (response != null && response['token'] != null) {
+        _token = response['token'];
+        await _secureStorage.write(key: 'jwt_token', value: _token);
+        _currentUser = User.fromJson(response);
+        _isAuthenticated = true;
+        Log.info('Registration successful for user: ${currentUser?.username}');
+        notifyListeners();
+        return true;
+      } else {
+        Log.error('Registration failed: Invalid response format or missing token.');
+         _handleAuthError();
+        return false;
+      }
     } catch (e) {
-      debugPrint('Erro ao verificar permissões: $e');
-      return false;
+      Log.error('Registration error: ${e.toString()}');
+       _handleAuthError();
+      throw Exception('Registration failed: ${e.toString()}');
     }
   }
 
-  // Verificar se o usuário é dono
-  Future<bool> isOwner() async {
+  Future<void> fetchUserProfile() async {
+    if (_token == null) {
+      // Attempt to read from storage if token is null in memory
+      _token = await _secureStorage.read(key: 'jwt_token');
+      if (_token == null) {
+         Log.warning('Cannot fetch profile: No token available.');
+         _handleAuthError();
+         throw Exception('Not authenticated');
+      }
+    }
+
     try {
-      UserModel? user = await getCurrentUserData();
-      return user != null && user.role == 'owner';
+      final response = await _apiService.get('/api/auth/profile', requireAuth: true);
+      if (response != null) {
+        _currentUser = User.fromJson(response);
+        _isAuthenticated = true;
+        Log.info('User profile fetched: ${currentUser?.username}');
+        notifyListeners();
+      } else {
+         Log.warning('Fetch profile failed: No user data received.');
+         _handleAuthError(); // Consider if this should trigger logout
+         throw Exception('Failed to fetch profile data');
+      }
     } catch (e) {
-      debugPrint('Erro ao verificar permissões de dono: $e');
-      return false;
+      Log.error('Fetch profile error: ${e.toString()}');
+      _handleAuthError(); // Token might be invalid/expired
+      rethrow;
     }
   }
-  
-  // Converter mensagens de erro para formato amigável
-  String _getErrorMessage(dynamic error) {
-    String errorMessage = error.toString();
-    
-    if (errorMessage.contains('email-already-in-use')) {
-      return 'Este email já está em uso';
-    } else if (errorMessage.contains('invalid-email')) {
-      return 'Email inválido';
-    } else if (errorMessage.contains('user-not-found')) {
-      return 'Usuário não encontrado';
-    } else if (errorMessage.contains('wrong-password')) {
-      return 'Senha incorreta';
-    } else if (errorMessage.contains('weak-password')) {
-      return 'Senha muito fraca';
-    } else if (errorMessage.contains('network-request-failed')) {
-      return 'Problema de conexão com a internet';
-    } else if (errorMessage.contains('permission-denied')) {
-      return 'Permissão negada';
-    } else if (errorMessage.contains('operation-not-allowed')) {
-      return 'Operação não permitida';
-    }
-    
-    return 'Ocorreu um erro inesperado';
+
+  Future<void> logout() async {
+    Log.info('Logging out user...');
+    _token = null;
+    _currentUser = null;
+    _isAuthenticated = false;
+    await _secureStorage.delete(key: 'jwt_token');
+    // Optionally notify backend or perform other cleanup
+    notifyListeners();
+  }
+
+  void _handleAuthError() {
+     // Central place to handle auth errors, potentially trigger logout
+     if (_isAuthenticated) {
+        Log.warning('Authentication error occurred, logging out.');
+        logout();
+     } else {
+        // If already logged out, just ensure state is clean
+        _token = null;
+        _currentUser = null;
+        _isAuthenticated = false;
+        _secureStorage.delete(key: 'jwt_token');
+        notifyListeners();
+     }
   }
 }
+

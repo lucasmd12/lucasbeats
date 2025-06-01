@@ -1,505 +1,471 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:uuid/uuid.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Para buscar nomes de usuário
+import '../services/signaling_service.dart';
 import '../utils/logger.dart';
-import '../models/user_model.dart'; // Assuming UserModel exists
+import '../models/user_model.dart'; // Para obter dados do usuário atual
 
-enenum CallState { idle, calling, receiving, connected, error }
+enum CallState { idle, joining, leaving, connected, error }
 
+/// Gerencia o estado da chamada WebRTC e a interação com o serviço de sinalização.
 class CallProvider extends ChangeNotifier {
-  // --- Connection & State ---
-  IO.Socket? _socket;
-  RTCPeerConnection? _peerConnection;
+  // --- Dependências ---
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  SignalingService? _signalingService;
+
+  // --- Estado da Conexão WebRTC ---
+  final Map<String, RTCPeerConnection> _peerConnections = {};
+  final Map<String, MediaStream> _remoteStreams = {};
   MediaStream? _localStream;
-  MediaStream? _remoteStream;
+  String? _currentChannelId;
   CallState _callState = CallState.idle;
-  String? _currentCallId; // ID for the current call session
-  String? _remoteUserId; // ID of the user being called or calling
-  String? _remoteUserName; // Name of the remote user
   String? _errorMessage;
+  bool _isMicMuted = false;
+  bool _isSpeakerOn = true; // Padrão para viva-voz em chamadas de grupo
 
   // --- Getters ---
   CallState get callState => _callState;
   MediaStream? get localStream => _localStream;
-  MediaStream? get remoteStream => _remoteStream;
-  String? get remoteUserName => _remoteUserName;
+  Map<String, MediaStream> get remoteStreams => _remoteStreams;
   String? get errorMessage => _errorMessage;
-  bool get isMicMuted => _localStream?.getAudioTracks()[0].enabled == false;
-  bool get isSpeakerOn => true; // TODO: Implement speakerphone toggle if needed
+  bool get isMicMuted => _isMicMuted;
+  bool get isSpeakerOn => _isSpeakerOn;
+  String? get currentChannelId => _currentChannelId;
 
-  // --- Signaling Server URL (Replace with actual server URL) ---
-  // IMPORTANT: Use HTTPS for production deployments unless testing locally
-  final String _signalingServerUrl = 'https://3000-i5baaocv71dcx11ih6kzz-de4a2afc.manus.computer'; // Public URL
+  // --- Configuração WebRTC ---
+  // Usar STUN do Google como padrão. Adicionar TURN se necessário.
+  final Map<String, dynamic> _rtcConfiguration = {
+    'iceServers': [
+      {'urls': 'stun:stun.l.google.com:19302'},
+      // {'urls': 'stun:stun1.l.google.com:19302'},
+      // Adicionar servidores TURN aqui
+    ]
+  };
+  final Map<String, dynamic> _rtcConstraints = {
+    'mandatory': {},
+    'optional': [
+      {'DtlsSrtpKeyAgreement': true},
+    ],
+  };
 
-  final Uuid _uuid = const Uuid();
-  String? _selfId; // Current user's ID
+  StreamSubscription? _offerSubscription;
+  StreamSubscription? _answerSubscription;
+  StreamSubscription? _candidateSubscription;
+  StreamSubscription? _peerJoinedSubscription; // Para detectar novos peers (simplificado)
+  StreamSubscription? _peerLeftSubscription; // Para detectar peers saindo (simplificado)
 
-  // --- Initialization & Cleanup ---
+  // --- Inicialização e Limpeza ---
+
+  /// Inicializa o CallProvider com o UserModel do usuário atual.
   void initialize(UserModel currentUser) {
-    _selfId = currentUser.uid;
-    _connectSignaling();
-  }
-
-  void _connectSignaling() {
-    if (_socket != null && _socket!.connected) return;
-
-    try {
-      _socket = IO.io(_signalingServerUrl, <String, dynamic>{
-        'transports': ['websocket'],
-        'autoConnect': true,
-        'query': {'userId': _selfId} // Send user ID on connection
-      });
-
-      _socket!.onConnect((_) {
-        Logger.info('Signaling connected: ${_socket!.id}');
-        // Register user ID with signaling server if needed (handled by query now)
-        // _socket!.emit('register', _selfId);
-      });
-
-      _socket!.onDisconnect((_) => Logger.warn('Signaling disconnected'));
-      _socket!.onError((data) => Logger.error('Signaling error: $data'));
-
-      // --- WebRTC Signaling Handlers ---
-      _socket!.on('incoming_call', _handleIncomingCall);
-      _socket!.on('call_accepted', _handleCallAccepted);
-      _socket!.on('offer', _handleOffer);
-      _socket!.on('answer', _handleAnswer);
-      _socket!.on('ice_candidate', _handleIceCandidate);
-      _socket!.on('call_ended', _handleCallEnded);
-      _socket!.on('call_rejected', _handleCallRejected); // Handle rejection
-
-    } catch (e, stackTrace) {
-      Logger.error('Failed to connect to signaling server', error: e, stackTrace: stackTrace);
-      _updateCallState(CallState.error, 'Falha ao conectar ao servidor.');
-    }
+    Logger.info("Initializing CallProvider for user: ${currentUser.uid}");
+    _signalingService = SignalingService(currentUser.uid);
+    // Não conecta a um canal aqui, espera o usuário entrar em um
   }
 
   @override
   void dispose() {
-    _cleanUp();
+    Logger.info('Disposing CallProvider...');
+    _cleanUpCurrentCall();
+    _signalingService?.dispose();
     super.dispose();
   }
 
-  void _cleanUp() {
-    Logger.info('Cleaning up CallProvider...');
-    _localStream?.getTracks().forEach((track) => track.stop());
-    _localStream?.dispose();
-    _localStream = null;
+  /// Limpa todos os recursos relacionados à chamada atual (streams, conexões).
+  Future<void> _cleanUpCurrentCall() async {
+    Logger.info('Cleaning up current call resources...');
+    _updateCallState(CallState.leaving);
 
-    _remoteStream?.getTracks().forEach((track) => track.stop());
-    _remoteStream?.dispose();
-    _remoteStream = null;
+    // Parar e liberar stream local
+    if (_localStream != null) {
+      for (var track in _localStream!.getTracks()) {
+        await track.stop();
+      }
+      await _localStream!.dispose();
+      _localStream = null;
+      Logger.info('Local stream stopped and disposed.');
+    }
 
-    _peerConnection?.close();
-    _peerConnection = null;
+    // Fechar e limpar todas as conexões peer
+    await Future.forEach(_peerConnections.entries, (entry) async {
+      final peerId = entry.key;
+      final pc = entry.value;
+      await pc.close();
+      Logger.info('Peer connection closed for peer: $peerId');
+    });
+    _peerConnections.clear();
 
-    _socket?.disconnect();
-    _socket?.dispose();
-    _socket = null;
+    // Limpar streams remotos
+    await Future.forEach(_remoteStreams.entries, (entry) async {
+       final stream = entry.value;
+       await stream.dispose();
+    });
+    _remoteStreams.clear();
+    Logger.info('Remote streams disposed.');
 
-    _callState = CallState.idle;
-    _currentCallId = null;
-    _remoteUserId = null;
-    _remoteUserName = null;
-    _errorMessage = null;
-    // Don't notify listeners here as dispose is final
+    // Cancelar inscrições de sinalização
+    _offerSubscription?.cancel();
+    _answerSubscription?.cancel();
+    _candidateSubscription?.cancel();
+    _peerJoinedSubscription?.cancel();
+    _peerLeftSubscription?.cancel();
+    _offerSubscription = null;
+    _answerSubscription = null;
+    _candidateSubscription = null;
+    _peerJoinedSubscription = null;
+    _peerLeftSubscription = null;
+    Logger.info('Signaling subscriptions cancelled.');
+
+    // Desconectar do serviço de sinalização
+    _signalingService?.disconnect();
+
+    _currentChannelId = null;
+    _updateCallState(CallState.idle);
+    Logger.info('Call cleanup complete.');
   }
 
-  // --- Call Initiation ---
-  Future<void> makeCall(String targetUserId, String targetUserName) async {
-    if (_callState != CallState.idle || _selfId == null) {
-      Logger.warn('Cannot make call: State is not idle or selfId is null.');
+  // --- Gerenciamento de Canal ---
+
+  /// Entra em um canal de voz, inicializa mídia local e sinalização.
+  Future<void> joinChannel(String channelId) async {
+    if (_callState != CallState.idle || _signalingService == null) {
+      Logger.warning('Cannot join channel: State is not idle or signaling service not initialized.');
       return;
     }
-    if (_socket == null || !_socket!.connected) {
-       _updateCallState(CallState.error, 'Não conectado ao servidor de sinalização.');
+    if (_auth.currentUser == null) {
+       Logger.error('Cannot join channel: User not logged in.');
+       _updateCallState(CallState.error, 'Usuário não autenticado.');
        return;
     }
 
-    _remoteUserId = targetUserId;
-    _remoteUserName = targetUserName;
-    _currentCallId = _uuid.v4(); // Generate unique call ID
-    _updateCallState(CallState.calling);
+    Logger.info('Joining channel: $channelId');
+    _updateCallState(CallState.joining);
+    _currentChannelId = channelId;
 
     try {
-      await _createPeerConnection();
-      await _createOffer();
-      // Send call request via signaling
-      _socket!.emit('make_call', {
-        'callId': _currentCallId,
-        'callerId': _selfId,
-        'calleeId': _remoteUserId,
-        'callerName': 'Nome do Usuário Atual' // TODO: Get current user's name
-      });
-      Logger.info('Making call to $targetUserId (Call ID: $_currentCallId)');
-    } catch (e, stackTrace) {
-      Logger.error('Error making call', error: e, stackTrace: stackTrace);
-      _updateCallState(CallState.error, 'Erro ao iniciar chamada.');
-      await _endCallLocally();
-    }
-  }
-
-  // --- Call Handling ---
-  void _handleIncomingCall(dynamic data) {
-    if (_callState != CallState.idle) {
-      Logger.warn('Ignoring incoming call: Already in a call or busy.');
-      // Optionally send a 'busy' signal back
-      _socket?.emit('reject_call', {'callId': data['callId'], 'reason': 'busy'});
-      return;
-    }
-    _currentCallId = data['callId'];
-    _remoteUserId = data['callerId'];
-    _remoteUserName = data['callerName'] ?? 'Desconhecido';
-    Logger.info('Incoming call from $_remoteUserId (Name: $_remoteUserName, Call ID: $_currentCallId)');
-    _updateCallState(CallState.receiving);
-    // UI should now show incoming call screen
-  }
-
-  Future<void> acceptCall() async {
-    if (_callState != CallState.receiving || _currentCallId == null || _remoteUserId == null) {
-      Logger.warn('Cannot accept call: Invalid state.');
-      return;
-    }
-
-    try {
-      await _createPeerConnection();
-      // Send acceptance signal
-      _socket!.emit('accept_call', {'callId': _currentCallId, 'calleeId': _selfId});
-      Logger.info('Accepting call ID: $_currentCallId');
-      // Offer will be created by the caller upon receiving 'call_accepted'
-      // Or handle offer directly if sent with 'incoming_call'
-      // For simplicity, let's assume offer comes after acceptance signal
-      _updateCallState(CallState.connected); // Tentative state, offer/answer needed
-    } catch (e, stackTrace) {
-      Logger.error('Error accepting call', error: e, stackTrace: stackTrace);
-      _updateCallState(CallState.error, 'Erro ao aceitar chamada.');
-      await _endCallLocally();
-    }
-  }
-
-  void rejectCall() {
-    if (_callState != CallState.receiving || _currentCallId == null) {
-      Logger.warn('Cannot reject call: Invalid state.');
-      return;
-    }
-    Logger.info('Rejecting call ID: $_currentCallId');
-    _socket?.emit('reject_call', {'callId': _currentCallId, 'calleeId': _selfId, 'reason': 'rejected'});
-    _resetCallState();
-  }
-
-  void _handleCallAccepted(dynamic data) async {
-    if (_callState != CallState.calling || data['callId'] != _currentCallId) {
-      Logger.warn('Received call_accepted in wrong state or for wrong call ID.');
-      return;
-    }
-    Logger.info('Call accepted by ${data['calleeId']} (Call ID: $_currentCallId)');
-    // Now that call is accepted, proceed with sending the offer if not already sent
-    // (Offer creation was moved to makeCall for simplicity here)
-    // If offer wasn't created yet, create and send it now.
-    // await _createOffer(); // Assuming offer was already created in makeCall
-    _updateCallState(CallState.connected); // Move to connected state after acceptance
-  }
-
-  void _handleCallRejected(dynamic data) {
-     if (data['callId'] != _currentCallId) return;
-     Logger.info('Call rejected by $_remoteUserId. Reason: ${data['reason']}');
-     _updateCallState(CallState.idle, 'Chamada rejeitada.');
-     _endCallLocally();
-  }
-
-  Future<void> endCall() async {
-    if (_callState == CallState.idle) return;
-
-    Logger.info('Ending call ID: $_currentCallId');
-    _socket?.emit('end_call', {'callId': _currentCallId, 'userId': _selfId});
-    await _endCallLocally();
-  }
-
-  void _handleCallEnded(dynamic data) {
-    if (data['callId'] != _currentCallId) return;
-    Logger.info('Received call_ended signal from remote user.');
-    _endCallLocally(notify: false); // End locally without sending another signal
-     _updateCallState(CallState.idle, 'Chamada encerrada.');
-  }
-
-  Future<void> _endCallLocally({bool notify = true}) async {
-    Logger.info('Ending call locally...');
-    await _localStream?.getTracks().forEach((track) async => await track.stop());
-    await _localStream?.dispose();
-    _localStream = null;
-
-    await _remoteStream?.getTracks().forEach((track) async => await track.stop());
-    await _remoteStream?.dispose();
-    _remoteStream = null;
-
-    await _peerConnection?.close();
-    _peerConnection = null;
-
-    if (notify) {
-       _resetCallState();
-    } else {
-       _callState = CallState.idle;
-       _currentCallId = null;
-       _remoteUserId = null;
-       _remoteUserName = null;
-       _errorMessage = null;
-       // No notifyListeners here, handled by caller (_handleCallEnded)
-    }
-  }
-
-  void _resetCallState() {
-    _callState = CallState.idle;
-    _currentCallId = null;
-    _remoteUserId = null;
-    _remoteUserName = null;
-    _errorMessage = null;
-    notifyListeners();
-  }
-
-  // --- WebRTC Core Logic ---
-  Future<void> _createPeerConnection() async {
-    if (_peerConnection != null) return;
-
-    Logger.info('Creating Peer Connection...');
-    // IMPORTANT: Add STUN/TURN server configuration for real-world use
-    final Map<String, dynamic> configuration = {
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'},
-        // Add TURN servers here if needed for NAT traversal
-        // {
-        //   'urls': 'turn:your_turn_server.com:3478',
-        //   'username': 'your_username',
-        //   'credential': 'your_password',
-        // },
-      ]
-    };
-    final Map<String, dynamic> constraints = {
-      'mandatory': {},
-      'optional': [
-        {'DtlsSrtpKeyAgreement': true},
-      ],
-    };
-
-    try {
-      _peerConnection = await createPeerConnection(configuration, constraints);
-      Logger.info('Peer Connection created.');
-
-      // Listeners for Peer Connection events
-      _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
-        Logger.debug('onIceCandidate: ${candidate.candidate}');
-        if (candidate.candidate != null) {
-          _socket!.emit('ice_candidate', {
-            'callId': _currentCallId,
-            'targetId': _remoteUserId,
-            'candidate': {
-              'sdpMLineIndex': candidate.sdpMLineIndex,
-              'sdpMid': candidate.sdpMid,
-              'candidate': candidate.candidate,
-            }
-          });
-        }
-      };
-
-      _peerConnection!.onAddStream = (MediaStream stream) {
-        Logger.info('Remote stream added: ${stream.id}');
-        _remoteStream = stream;
-        _updateCallState(CallState.connected); // Ensure state is connected
-      };
-
-      _peerConnection!.onRemoveStream = (MediaStream stream) {
-        Logger.warn('Remote stream removed: ${stream.id}');
-        _remoteStream?.dispose();
-        _remoteStream = null;
-      };
-
-      _peerConnection!.onIceConnectionState = (RTCIceConnectionState state) {
-        Logger.info('ICE Connection State: $state');
-        // Handle states like disconnected, failed, closed
-        if (state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
-            state == RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
-            state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
-             if (_callState == CallState.connected) { // Only end if we were connected
-                Logger.warn('ICE connection failed/disconnected. Ending call.');
-                endCall();
-             }
-        }
-      };
-
-      // Get local media stream
+      // 1. Obter mídia local (microfone)
       await _getLocalMedia();
 
+      // 2. Conectar ao serviço de sinalização para este canal
+      _signalingService!.connect(channelId);
+      _listenToSignalingEvents();
+
+      // 3. Anunciar presença ou buscar peers existentes (simplificado)
+      // Uma lógica mais robusta buscaria a lista de membros do Firestore
+      // e iniciaria conexões com eles.
+      // Por simplicidade, vamos esperar por ofertas ou criar conexões reativamente.
+
+      _updateCallState(CallState.connected); // Estado inicial no canal
+      Logger.info('Successfully joined channel: $channelId');
+
     } catch (e, stackTrace) {
-      Logger.error('Error creating Peer Connection', error: e, stackTrace: stackTrace);
-      _updateCallState(CallState.error, 'Erro ao criar conexão.');
-      await _endCallLocally();
+      Logger.error('Error joining channel $channelId', error: e, stackTrace: stackTrace);
+      _updateCallState(CallState.error, 'Erro ao entrar no canal.');
+      await _cleanUpCurrentCall();
     }
   }
 
+  /// Sai do canal de voz atual, limpando recursos.
+  Future<void> leaveChannel() async {
+    if (_callState == CallState.idle || _callState == CallState.leaving) {
+      Logger.info('Already idle or leaving channel.');
+      return;
+    }
+    Logger.info('Leaving channel: $_currentChannelId');
+    await _cleanUpCurrentCall();
+  }
+
+  // --- Lógica WebRTC ---
+
+  /// Obtém o stream de áudio local do microfone.
   Future<void> _getLocalMedia() async {
-    if (_localStream != null) return;
+    if (_localStream != null) return; // Já possui stream
 
     Logger.info('Getting local media stream...');
     try {
       final Map<String, dynamic> mediaConstraints = {
         'audio': true,
-        'video': false // Set to true if video call is needed
+        'video': false // Apenas áudio por enquanto
       };
       _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      _localStream!.getAudioTracks()[0].enabled = !_isMicMuted; // Aplica estado mudo inicial
       Logger.info('Local media stream obtained: ${_localStream!.id}');
-      // Add local stream to peer connection
-      if (_peerConnection != null && _localStream != null) {
-         await _peerConnection!.addStream(_localStream!); // Use await
-         Logger.info('Local stream added to Peer Connection.');
-      } else {
-         Logger.warn('PeerConnection or LocalStream is null, cannot add stream.');
-      }
+      notifyListeners(); // Notifica a UI sobre o stream local
     } catch (e, stackTrace) {
       Logger.error('Error getting local media', error: e, stackTrace: stackTrace);
       _updateCallState(CallState.error, 'Erro ao acessar microfone.');
-      await _endCallLocally();
-      throw e; // Re-throw to signal failure
+      throw e; // Re-propaga o erro para quem chamou (joinChannel)
     }
   }
 
-  Future<void> _createOffer() async {
-    if (_peerConnection == null) {
-      Logger.error('Cannot create offer: PeerConnection is null.');
+  /// Cria ou obtém uma conexão RTCPeerConnection para um peer específico.
+  Future<RTCPeerConnection> _getOrCreatePeerConnection(String peerId) async {
+    RTCPeerConnection? pc = _peerConnections[peerId];
+    if (pc != null) {
+      return pc;
+    }
+
+    Logger.info('Creating new Peer Connection for peer: $peerId');
+    pc = await createPeerConnection(_rtcConfiguration, _rtcConstraints);
+    _peerConnections[peerId] = pc;
+
+    // Adiciona o stream local à nova conexão
+    if (_localStream != null) {
+      // pc.addStream(_localStream!); // Método antigo
+      _localStream!.getTracks().forEach((track) {
+        pc!.addTrack(track, _localStream!); // Método novo
+        Logger.debug('Local track ${track.kind} added to PC for $peerId');
+      });
+    } else {
+      Logger.warning('Local stream is null when creating PC for $peerId');
+    }
+
+    // --- Handlers para a conexão Peer ---
+    pc.onIceCandidate = (RTCIceCandidate candidate) {
+      Logger.debug('onIceCandidate for $peerId: ${candidate.candidate?.substring(0, 15)}...');
+      _signalingService?.sendCandidate(peerId, candidate);
+    };
+
+    pc.onTrack = (RTCTrackEvent event) {
+      Logger.info('onTrack received from $peerId: ${event.streams.length} streams, track: ${event.track.kind}');
+      if (event.streams.isNotEmpty) {
+        final stream = event.streams[0];
+        Logger.info('Remote stream ${stream.id} added for peer $peerId');
+        _remoteStreams[peerId] = stream;
+        notifyListeners(); // Notifica a UI sobre o novo stream remoto
+      }
+    };
+
+    // pc.onAddStream = (MediaStream stream) { // Método antigo
+    //   Logger.info('Remote stream ${stream.id} added for peer $peerId');
+    //   _remoteStreams[peerId] = stream;
+    //   notifyListeners(); // Notifica a UI sobre o novo stream remoto
+    // };
+
+    pc.onRemoveStream = (MediaStream stream) { // Ainda pode ser útil para limpeza
+      Logger.warning('Remote stream ${stream.id} removed for peer $peerId');
+      _remoteStreams.remove(peerId);
+      stream.dispose();
+      notifyListeners();
+    };
+
+    pc.onIceConnectionState = (RTCIceConnectionState state) {
+      Logger.info('ICE Connection State for $peerId: $state');
+      if (state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
+          state == RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
+          state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
+        Logger.warning('ICE connection failed/disconnected for $peerId. Cleaning up connection.');
+        _closePeerConnection(peerId);
+      }
+    };
+
+    pc.onConnectionState = (RTCPeerConnectionState state) {
+       Logger.info('Peer Connection State for $peerId: $state');
+        if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+            state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+            state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+          Logger.warning('Peer connection failed/disconnected for $peerId. Cleaning up connection.');
+          _closePeerConnection(peerId);
+        }
+    };
+
+    return pc;
+  }
+
+  /// Fecha e remove a conexão com um peer específico.
+  Future<void> _closePeerConnection(String peerId) async {
+    final pc = _peerConnections.remove(peerId);
+    if (pc != null) {
+      await pc.close();
+      Logger.info('Peer connection closed and removed for $peerId');
+    }
+    final stream = _remoteStreams.remove(peerId);
+    if (stream != null) {
+       await stream.dispose();
+       Logger.info('Remote stream disposed for $peerId');
+    }
+    notifyListeners();
+  }
+
+  /// Inicia a escuta por eventos de sinalização do SignalingService.
+  void _listenToSignalingEvents() {
+    if (_signalingService == null) return;
+
+    _offerSubscription = _signalingService!.onOfferReceived.listen(_handleOffer);
+    _answerSubscription = _signalingService!.onAnswerReceived.listen(_handleAnswer);
+    _candidateSubscription = _signalingService!.onCandidateReceived.listen(_handleCandidate);
+
+    // TODO: Implementar lógica de descoberta de peers mais robusta
+    // Exemplo: Ouvir por um nó 'members' no Realtime DB ou Firestore
+    _peerJoinedSubscription = _signalingService!.onPeerJoined.listen((peerId) {
+      if (peerId != _auth.currentUser?.uid) {
+        Logger.info('Peer $peerId joined the channel. Initiating connection.');
+        _initiateConnection(peerId);
+      }
+    });
+
+    _peerLeftSubscription = _signalingService!.onPeerLeft.listen((peerId) {
+      if (peerId != _auth.currentUser?.uid) {
+        Logger.info('Peer $peerId left the channel. Closing connection.');
+        _closePeerConnection(peerId);
+      }
+    });
+     Logger.info('Listening to signaling events.');
+  }
+
+  /// Inicia a conexão com um novo peer que entrou no canal.
+  Future<void> _initiateConnection(String peerId) async {
+    if (_peerConnections.containsKey(peerId)) {
+      Logger.info('Connection already exists or being initiated for peer $peerId');
       return;
     }
-    Logger.info('Creating SDP Offer...');
     try {
-      RTCSessionDescription description = await _peerConnection!.createOffer({'offerToReceiveAudio': 1});
-      await _peerConnection!.setLocalDescription(description);
-      Logger.info('SDP Offer created and set as local description.');
-
-      // Send offer via signaling
-      _socket!.emit('offer', {
-        'callId': _currentCallId,
-        'targetId': _remoteUserId,
-        'offer': description.toMap()
-      });
+      final pc = await _getOrCreatePeerConnection(peerId);
+      final offer = await pc.createOffer({'offerToReceiveAudio': 1});
+      await pc.setLocalDescription(offer);
+      Logger.info('Created offer for peer $peerId');
+      _signalingService?.sendOffer(peerId, offer);
     } catch (e, stackTrace) {
-      Logger.error('Error creating offer', error: e, stackTrace: stackTrace);
-      _updateCallState(CallState.error, 'Erro ao criar oferta.');
-      await _endCallLocally();
+      Logger.error('Error initiating connection with $peerId', error: e, stackTrace: stackTrace);
+      _closePeerConnection(peerId); // Limpa se falhar
     }
   }
 
-  Future<void> _createAnswer() async {
-    if (_peerConnection == null) {
-      Logger.error('Cannot create answer: PeerConnection is null.');
+  /// Lida com uma oferta recebida de um peer.
+  Future<void> _handleOffer(Map<String, dynamic> data) async {
+    final senderId = data['senderId'] as String?;
+    final sdpData = data['sdp'] as Map?;
+
+    if (senderId == null || sdpData == null) {
+      Logger.warning('Invalid offer data received: $data');
       return;
     }
-    Logger.info('Creating SDP Answer...');
-    try {
-      RTCSessionDescription description = await _peerConnection!.createAnswer({'offerToReceiveAudio': 1});
-      await _peerConnection!.setLocalDescription(description);
-      Logger.info('SDP Answer created and set as local description.');
 
-      // Send answer via signaling
-      _socket!.emit('answer', {
-        'callId': _currentCallId,
-        'targetId': _remoteUserId,
-        'answer': description.toMap()
-      });
+    Logger.info('Received offer from $senderId');
+    try {
+      final pc = await _getOrCreatePeerConnection(senderId);
+      final offer = RTCSessionDescription(sdpData['sdp'], sdpData['type']);
+
+      await pc.setRemoteDescription(offer);
+      Logger.info('Remote description (offer) set for $senderId');
+
+      final answer = await pc.createAnswer({'offerToReceiveAudio': 1});
+      await pc.setLocalDescription(answer);
+      Logger.info('Created answer for $senderId');
+
+      _signalingService?.sendAnswer(senderId, answer);
     } catch (e, stackTrace) {
-      Logger.error('Error creating answer', error: e, stackTrace: stackTrace);
-      _updateCallState(CallState.error, 'Erro ao criar resposta.');
-      await _endCallLocally();
+      Logger.error('Error handling offer from $senderId', error: e, stackTrace: stackTrace);
+      _closePeerConnection(senderId); // Limpa se falhar
     }
   }
 
-  void _handleOffer(dynamic data) async {
-    if (data['callId'] != _currentCallId || _callState == CallState.idle) {
-       Logger.warn('Received offer for wrong call ID or in idle state.');
-       return;
+  /// Lida com uma resposta recebida de um peer.
+  Future<void> _handleAnswer(Map<String, dynamic> data) async {
+    final senderId = data['senderId'] as String?;
+    final sdpData = data['sdp'] as Map?;
+
+    if (senderId == null || sdpData == null) {
+      Logger.warning('Invalid answer data received: $data');
+      return;
     }
-    Logger.info('Received SDP Offer from ${data['callerId']}');
+
+    Logger.info('Received answer from $senderId');
+    final pc = _peerConnections[senderId];
+    if (pc == null) {
+      Logger.warning('Received answer from $senderId but no PeerConnection found.');
+      return;
+    }
+
     try {
-      // Ensure peer connection exists (might be created on incoming call accept)
-      await _createPeerConnection();
-
-      final offer = RTCSessionDescription(data['offer']['sdp'], data['offer']['type']);
-      await _peerConnection!.setRemoteDescription(offer);
-      Logger.info('Remote description (Offer) set.');
-
-      // Create and send answer
-      await _createAnswer();
-      _updateCallState(CallState.connected); // Confirm connected state
-
+      final answer = RTCSessionDescription(sdpData['sdp'], sdpData['type']);
+      await pc.setRemoteDescription(answer);
+      Logger.info('Remote description (answer) set for $senderId');
+      // Conexão deve estar estabelecida agora
     } catch (e, stackTrace) {
-      Logger.error('Error handling offer', error: e, stackTrace: stackTrace);
-      _updateCallState(CallState.error, 'Erro ao processar oferta.');
-      await _endCallLocally();
+      Logger.error('Error handling answer from $senderId', error: e, stackTrace: stackTrace);
+      _closePeerConnection(senderId);
     }
   }
 
-  void _handleAnswer(dynamic data) async {
-     if (data['callId'] != _currentCallId || _callState != CallState.connected) {
-       Logger.warn('Received answer for wrong call ID or in wrong state.');
-       return;
-    }
-    Logger.info('Received SDP Answer from ${data['calleeId']}');
-    try {
-      final answer = RTCSessionDescription(data['answer']['sdp'], data['answer']['type']);
-      await _peerConnection!.setRemoteDescription(answer);
-      Logger.info('Remote description (Answer) set.');
-      // Connection should be established now
-    } catch (e, stackTrace) {
-      Logger.error('Error handling answer', error: e, stackTrace: stackTrace);
-      _updateCallState(CallState.error, 'Erro ao processar resposta.');
-      await _endCallLocally();
-    }
-  }
+  /// Lida com um candidato ICE recebido de um peer.
+  Future<void> _handleCandidate(Map<String, dynamic> data) async {
+    final senderId = data['senderId'] as String?;
+    final candidateData = data['candidate'] as Map?;
 
-  void _handleIceCandidate(dynamic data) async {
-     if (data['callId'] != _currentCallId || _peerConnection == null) {
-       Logger.warn('Received ICE candidate for wrong call ID or null PeerConnection.');
-       return;
+    if (senderId == null || candidateData == null) {
+      Logger.warning('Invalid ICE candidate data received: $data');
+      return;
     }
-    Logger.debug('Received ICE Candidate from remote peer');
+
+    final pc = _peerConnections[senderId];
+    if (pc == null) {
+      Logger.warning('Received ICE candidate from $senderId but no PeerConnection found.');
+      return;
+    }
+
     try {
       final candidate = RTCIceCandidate(
-        data['candidate']['candidate'],
-        data['candidate']['sdpMid'],
-        data['candidate']['sdpMLineIndex'],
+        candidateData['candidate'],
+        candidateData['sdpMid'],
+        candidateData['sdpMLineIndex'],
       );
-      await _peerConnection!.addCandidate(candidate);
-      Logger.debug('ICE Candidate added.');
-    } catch (e, stackTrace) {
-      Logger.error('Error adding ICE candidate', error: e, stackTrace: stackTrace);
-      // This might not be fatal, but log it.
+      await pc.addCandidate(candidate);
+      Logger.debug('ICE Candidate added for $senderId');
+    } catch (e) {
+      // Ignorar erros "Invalid candidate" que podem ocorrer
+      if (!e.toString().contains("Error(addIceCandidate)")) {
+         Logger.error('Error adding ICE candidate for $senderId: $e');
+      }
     }
   }
 
-  // --- Media Controls ---
+  // --- Controles de Mídia ---
+
+  /// Ativa/desativa o microfone.
   void toggleMute() {
+    _isMicMuted = !_isMicMuted;
     if (_localStream != null && _localStream!.getAudioTracks().isNotEmpty) {
-      bool currentMuteState = !_localStream!.getAudioTracks()[0].enabled;
-      _localStream!.getAudioTracks()[0].enabled = currentMuteState;
-      Logger.info('Microphone ${currentMuteState ? "unmuted" : "muted"}');
-      notifyListeners();
+      _localStream!.getAudioTracks()[0].enabled = !_isMicMuted;
+      Logger.info('Microphone ${_isMicMuted ? "muted" : "unmuted"}');
+    } else {
+      Logger.warning('Cannot toggle mute: Local stream or audio track not available.');
     }
+    notifyListeners();
   }
 
+  /// Ativa/desativa o viva-voz (speaker).
   void toggleSpeaker() {
-    // TODO: Implement speakerphone toggle using platform channels or a suitable plugin
-    Logger.warn('Speakerphone toggle not implemented yet.');
-    // if (_localStream != null && _localStream.getAudioTracks().isNotEmpty) {
-    //   MediaStreamTrack audioTrack = _localStream.getAudioTracks()[0];
-    //   Helper.setSpeakerphoneOn(!_speakerOn);
-    //   _speakerOn = !_speakerOn;
-    //   notifyListeners();
-    // }
+    _isSpeakerOn = !_isSpeakerOn;
+    Logger.info('Speakerphone ${_isSpeakerOn ? "ON" : "OFF"}');
+    // Aplica a configuração a todos os streams remotos
+    _remoteStreams.values.forEach((stream) {
+      stream.getAudioTracks().forEach((track) {
+        // A API `setSpeakerphoneOn` pode não estar disponível diretamente no track
+        // ou pode requerer um helper específico da plataforma.
+        // Por enquanto, apenas logamos e notificamos a UI.
+        // Helper.setSpeakerphoneOn(_isSpeakerOn); // Exemplo de como poderia ser
+      });
+    });
+    // CORREÇÃO: Comentando a linha que causa erro, pois MediaStreamTrack.setSpeakerphoneOn não existe.
+    // A funcionalidade de speaker/earpiece geralmente é controlada por helpers ou platform channels.
+    // MediaStreamTrack.setSpeakerphoneOn(_isSpeakerOn);
+    Logger.warning('Toggling speakerphone via MediaStreamTrack.setSpeakerphoneOn is not directly supported by flutter_webrtc. Use platform-specific helpers if needed.');
+
+    notifyListeners();
   }
 
-  // --- Helper Methods ---
+  // --- Métodos Auxiliares ---
+
+  /// Atualiza o estado da chamada e notifica os ouvintes.
   void _updateCallState(CallState newState, [String? message]) {
     if (_callState != newState) {
       Logger.info('Call state changed: $_callState -> $newState');
       _callState = newState;
-      _errorMessage = message; // Store error message if state is error
+      _errorMessage = message; // Armazena mensagem de erro se aplicável
       notifyListeners();
     }
   }

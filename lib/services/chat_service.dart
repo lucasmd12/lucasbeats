@@ -1,136 +1,216 @@
-import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:uuid/uuid.dart';
-import '../models/message_model.dart';
-import '../utils/logger.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:federacaomad/services/api_service.dart';
+import 'package:federacaomad/services/socket_service.dart';
+import 'package:federacaomad/models/chat_channel_model.dart'; // Assuming this exists or create it
+import 'package:federacaomad/models/message_model.dart'; // Assuming this exists or create it
+import 'package:federacaomad/utils/logger.dart';
 
-class ChatService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final ImagePicker _picker = ImagePicker();
-  final Uuid _uuid = const Uuid();
+class ChatService with ChangeNotifier {
+  final ApiService _apiService = ApiService();
+  final SocketService _socketService = SocketService();
 
-  // Get message stream for a specific chat
-  Stream<QuerySnapshot> getMessages(String chatId) {
-    return _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .orderBy('timestamp', descending: true)
-        .snapshots();
+  List<ChatChannel> _channels = [];
+  List<ChatChannel> get channels => _channels;
+
+  ChatChannel? _currentChannel;
+  ChatChannel? get currentChannel => _currentChannel;
+
+  List<Message> _messages = [];
+  List<Message> get messages => _messages;
+
+  bool _isLoadingChannels = false;
+  bool get isLoadingChannels => _isLoadingChannels;
+
+  bool _isLoadingMessages = false;
+  bool get isLoadingMessages => _isLoadingMessages;
+
+  StreamSubscription? _messageSubscription;
+  String? _activeChannelId;
+
+  ChatService() {
+    // Listen to incoming messages from SocketService
+    _messageSubscription = _socketService.messageStream.listen(_handleIncomingMessage);
   }
 
-  // Send a text message
-  Future<void> sendTextMessage({
-    required String chatId,
-    required String senderId,
-    required String senderName,
-    required String text,
-  }) async {
-    if (text.trim().isEmpty) return; // Don't send empty messages
-
-    final messageId = _uuid.v4();
-    final timestamp = Timestamp.now();
-
-    final newMessage = Message(
-      id: messageId,
-      chatId: chatId,
-      senderId: senderId,
-      senderName: senderName,
-      text: text.trim(),
-      type: MessageType.text,
-      timestamp: timestamp,
-    );
-
+  void _handleIncomingMessage(Map<String, dynamic> messageData) {
     try {
-      await _firestore
-          .collection('chats')
-          .doc(chatId)
-          .collection('messages')
-          .doc(messageId)
-          .set(newMessage.toJson());
-      Logger.info('Text message sent successfully to chat: $chatId');
-      // Optionally update the last message preview in the chat document
-      await _updateChatPreview(chatId, newMessage);
-    } catch (e, stackTrace) {
-      Logger.error('Failed to send text message', error: e, stackTrace: stackTrace);
-      // Handle error appropriately (e.g., show snackbar)
+      final message = Message.fromJson(messageData);
+      // Only add message if it belongs to the currently active channel
+      if (message.channel == _activeChannelId) {
+        _messages.add(message);
+        // Sort messages? Or assume they arrive in order?
+        // _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        Log.info('Added incoming message to channel $_activeChannelId');
+        notifyListeners();
+      }
+    } catch (e) {
+      Log.error('Error handling incoming message: ${e.toString()} Data: $messageData');
     }
   }
 
-  // Send an image message
-  Future<void> sendImageMessage({
-    required String chatId,
-    required String senderId,
-    required String senderName,
-    required XFile imageFile,
-  }) async {
-    final messageId = _uuid.v4();
-    final timestamp = Timestamp.now();
-    final fileName = '$messageId-${imageFile.name}';
-    final storageRef = _storage.ref().child('chat_media/$chatId/$fileName');
-
+  Future<void> fetchChannels() async {
+    _isLoadingChannels = true;
+    notifyListeners();
     try {
-      // 1. Upload image to Firebase Storage
-      Logger.info('Uploading image to Storage: ${storageRef.fullPath}');
-      UploadTask uploadTask = storageRef.putFile(File(imageFile.path));
-      TaskSnapshot snapshot = await uploadTask;
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-      Logger.info('Image uploaded successfully. URL: $downloadUrl');
-
-      // 2. Create message document in Firestore
-      final newMessage = Message(
-        id: messageId,
-        chatId: chatId,
-        senderId: senderId,
-        senderName: senderName,
-        mediaUrl: downloadUrl,
-        type: MessageType.image,
-        timestamp: timestamp,
-      );
-
-      await _firestore
-          .collection('chats')
-          .doc(chatId)
-          .collection('messages')
-          .doc(messageId)
-          .set(newMessage.toJson());
-      Logger.info('Image message sent successfully to chat: $chatId');
-      await _updateChatPreview(chatId, newMessage);
-
-    } catch (e, stackTrace) {
-      Logger.error('Failed to send image message', error: e, stackTrace: stackTrace);
-      // Handle error
+      final response = await _apiService.get('/api/channels');
+      if (response is List) {
+        _channels = response.map((data) => ChatChannel.fromJson(data)).toList();
+        Log.info('Fetched ${_channels.length} channels.');
+      } else {
+        _channels = [];
+        Log.warning('Unexpected response format when fetching channels: $response');
+      }
+    } catch (e) {
+      Log.error('Error fetching channels: ${e.toString()}');
+      _channels = []; // Clear channels on error
+    } finally {
+      _isLoadingChannels = false;
+      notifyListeners();
     }
   }
 
-  // Helper to update chat preview (last message, timestamp)
-  Future<void> _updateChatPreview(String chatId, Message lastMessage) async {
+  Future<ChatChannel?> fetchChannelDetails(String channelId) async {
+     // Optionally implement fetching full details if needed beyond the list view
+     try {
+       final response = await _apiService.get('/api/channels/$channelId');
+       if (response != null) {
+         return ChatChannel.fromJson(response);
+       }
+     } catch (e) {
+       Log.error('Error fetching channel details for $channelId: ${e.toString()}');
+     }
+     return null;
+  }
+
+  Future<void> joinChannelAndFetchMessages(String channelId) async {
+    if (_activeChannelId == channelId) {
+      Log.info('Already in channel $channelId');
+      return; // Already in this channel
+    }
+
+    _isLoadingMessages = true;
+    _messages = []; // Clear previous messages
+    _activeChannelId = channelId;
+    notifyListeners();
+
+    // Leave previous socket room if any
+    // if (_currentChannel != null) {
+    //   _socketService.leaveChannel(_currentChannel!.id);
+    // }
+
+    // Find channel details from the fetched list or fetch again
+    _currentChannel = _channels.firstWhere((c) => c.id == channelId, orElse: () => ChatChannel(id: channelId, name: 'Loading...', owner: '', members: [])); // Placeholder
+
     try {
-      await _firestore.collection('chats').doc(chatId).set({
-        'lastMessage': lastMessage.type == MessageType.text
-            ? lastMessage.text
-            : '[${lastMessage.type.name.capitalize()}]', // e.g., [Image], [Audio]
-        'lastMessageTimestamp': lastMessage.timestamp,
-        'lastSenderName': lastMessage.senderName,
-        // Keep other chat metadata like participants, chat name, etc.
-      }, SetOptions(merge: true)); // Merge to avoid overwriting other fields
-    } catch (e, stackTrace) {
-      Logger.warn('Failed to update chat preview for $chatId', error: e, stackTrace: stackTrace);
+      // Join Socket.IO room and get history
+      _socketService.joinChannel(channelId, (response) {
+        if (response['status'] == 'ok' && response['messages'] is List) {
+          final history = (response['messages'] as List)
+              .map((data) => Message.fromJson(data))
+              .toList();
+          _messages = history;
+          Log.info('Joined channel $channelId and received ${history.length} messages.');
+        } else {
+          Log.error('Error joining channel $channelId via socket: ${response['message']}');
+          // Optionally try fetching via REST as fallback?
+          // fetchMessagesREST(channelId);
+        }
+         _isLoadingMessages = false;
+         notifyListeners();
+      });
+    } catch (e) {
+      Log.error('Error initiating join channel $channelId: ${e.toString()}');
+      _isLoadingMessages = false;
+      notifyListeners();
     }
   }
 
-  // TODO: Implement methods for sending audio/video messages similarly
-  // TODO: Implement methods for creating/managing chat rooms (e.g., getOrCreateChat)
-}
+  // Optional: Fallback or alternative method to fetch messages via REST
+  Future<void> fetchMessagesREST(String channelId) async {
+    _isLoadingMessages = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.get('/api/channels/$channelId/messages');
+      if (response is List) {
+        _messages = response.map((data) => Message.fromJson(data)).toList();
+        Log.info('Fetched ${_messages.length} messages for channel $channelId via REST.');
+      } else {
+         _messages = [];
+         Log.warning('Unexpected response format fetching messages via REST: $response');
+      }
+    } catch (e) {
+      Log.error('Error fetching messages for channel $channelId via REST: ${e.toString()}');
+       _messages = [];
+    } finally {
+      _isLoadingMessages = false;
+      notifyListeners();
+    }
+  }
 
-// Helper extension for capitalizing enum names
-extension StringExtension on String {
-  String capitalize() {
-    if (isEmpty) return "";
-    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  Future<void> sendMessage(String content) async {
+    if (_activeChannelId == null || content.trim().isEmpty) {
+      Log.warning('Cannot send message: No active channel or empty content.');
+      return;
+    }
+    try {
+      _socketService.sendMessage(_activeChannelId!, content, (response) {
+        if (response['status'] == 'ok') {
+          Log.info('Message sent successfully to channel $_activeChannelId');
+          // Message will be added via the receive_message listener
+        } else {
+          Log.error('Error sending message: ${response['message']}');
+          // Handle UI feedback for send failure
+        }
+      });
+    } catch (e) {
+      Log.error('Error initiating send message: ${e.toString()}');
+      // Handle UI feedback for send failure
+    }
+  }
+
+  void leaveCurrentChannel() {
+    if (_activeChannelId != null) {
+      Log.info('Leaving channel $_activeChannelId');
+      _socketService.leaveChannel(_activeChannelId!);
+      _activeChannelId = null;
+      _currentChannel = null;
+      _messages = [];
+      notifyListeners();
+    }
+  }
+
+   Future<void> createChannel(String name, String? description) async {
+    try {
+      final response = await _apiService.post('/api/channels', {
+        'name': name,
+        if (description != null) 'description': description,
+      });
+      if (response != null) {
+        final newChannel = ChatChannel.fromJson(response);
+        _channels.add(newChannel);
+        Log.info('Channel created successfully: ${newChannel.name}');
+        notifyListeners();
+        // Optionally navigate to the new channel or refresh list
+      } else {
+         Log.error('Channel creation failed: No response data.');
+         throw Exception('Failed to create channel');
+      }
+    } catch (e) {
+      Log.error('Error creating channel: ${e.toString()}');
+      rethrow; // Let UI handle the error
+    }
+  }
+
+  @override
+  void dispose() {
+    Log.info('Disposing ChatService...');
+    _messageSubscription?.cancel();
+    // Ensure leaving the channel if active when service is disposed
+    if (_activeChannelId != null) {
+       _socketService.leaveChannel(_activeChannelId!);
+    }
+    super.dispose();
   }
 }
 

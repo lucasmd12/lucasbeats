@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:permission_handler/permission_handler.dart'; // Import permission_handler
 import '../providers/user_provider.dart';
 import '../utils/logger.dart';
 
-// Import Tab Widgets from the correct location
+// Import Tab Widgets
 import '../screens/tabs/home_tab.dart';
 import '../screens/tabs/members_tab.dart';
 import '../screens/tabs/missions_tab.dart';
 import '../screens/tabs/settings_tab.dart';
-import '../screens/tabs/chat_list_tab.dart'; // Added for Chat
+import '../screens/tabs/chat_list_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,7 +21,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0; // Default to Home tab
 
-  // Define the screens/tabs for the BottomNavigationBar using the correct imports
   static const List<Widget> _widgetOptions = <Widget>[
     HomeTab(),
     MembersTab(),
@@ -30,14 +29,103 @@ class _HomeScreenState extends State<HomeScreen> {
     SettingsTab(),
   ];
 
-  // Background images for different sections (optional)
   final List<String> _backgroundImages = [
-    'assets/images_png/background_image_01.png',
-    'assets/images_png/background_image_02.png',
-    'assets/images_png/background_image_03.png',
-    'assets/images_png/background_image_04.png',
-    'assets/images_png/background_image_05.png',
+    // Updated list with new background assets
+    'assets/images_png/backgrounds/bg_mercedes_forest.png', // Tab 0: Início
+    'assets/images_png/backgrounds/bg_bmw_smoke_01.png',    // Tab 1: Membros
+    'assets/images_png/backgrounds/bg_joker_smoke.png',     // Tab 2: Chat
+    'assets/images_png/backgrounds/bg_cards_dice.png',      // Tab 3: Missões
+    'assets/images_png/backgrounds/bg_audi_autumn.png',     // Tab 4: Config
+    // Add more if needed, or cycle through these
+    'assets/images_png/backgrounds/bg_mustang_autumn.png',
+    'assets/images_png/backgrounds/bg_gtr_night.png',
+    'assets/images_png/backgrounds/bg_bmw_smoke_02.png',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Request permissions after the first frame is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestPermissions();
+      // Initialize CallProvider here if not done in main.dart's StreamBuilder
+      // _initializeCallProviderIfNeeded();
+    });
+  }
+
+  // *** NOVO: Função para solicitar permissões ***
+  Future<void> _requestPermissions() async {
+    Logger.info("Requesting necessary permissions...");
+    // Request Notification permission
+    PermissionStatus notificationStatus = await Permission.notification.request();
+    if (notificationStatus.isGranted) {
+      Logger.info("Notification permission granted.");
+    } else if (notificationStatus.isDenied) {
+      Logger.warning("Notification permission denied.");
+      // Optionally show a dialog explaining why the permission is needed
+    } else if (notificationStatus.isPermanentlyDenied) {
+      Logger.error("Notification permission permanently denied.");
+      // Optionally guide user to app settings
+      _showSettingsDialog("Notificações");
+    }
+
+    // Request Storage permission (adjust based on Android version requirements)
+    // For Android 13+, specific permissions like photos, videos, audio might be needed.
+    // For simplicity, requesting general storage here.
+    PermissionStatus storageStatus = await Permission.storage.request();
+     if (storageStatus.isGranted) {
+      Logger.info("Storage permission granted.");
+    } else if (storageStatus.isDenied) {
+      Logger.warning("Storage permission denied.");
+    } else if (storageStatus.isPermanentlyDenied) {
+      Logger.error("Storage permission permanently denied.");
+      _showSettingsDialog("Armazenamento");
+    }
+
+    // Request Microphone permission (needed for VoIP)
+    PermissionStatus microphoneStatus = await Permission.microphone.request();
+     if (microphoneStatus.isGranted) {
+      Logger.info("Microphone permission granted.");
+    } else if (microphoneStatus.isDenied) {
+      Logger.warning("Microphone permission denied.");
+    } else if (microphoneStatus.isPermanentlyDenied) {
+      Logger.error("Microphone permission permanently denied.");
+       _showSettingsDialog("Microfone");
+    }
+
+     // Request Camera permission (if video calls are planned)
+    // PermissionStatus cameraStatus = await Permission.camera.request();
+    // if (cameraStatus.isGranted) {
+    //   Logger.info("Camera permission granted.");
+    // } else {
+    //   Logger.warning("Camera permission denied.");
+    // }
+  }
+
+  // *** NOVO: Função para mostrar diálogo de configurações ***
+  void _showSettingsDialog(String permissionName) {
+     if (!mounted) return; // Check if the widget is still in the tree
+     showDialog(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          title: Text("Permissão Necessária"),
+          content: Text("A permissão de $permissionName foi negada permanentemente. Por favor, habilite-a nas configurações do aplicativo para usar todas as funcionalidades."),
+          actions: <Widget>[
+            TextButton(
+              child: Text("Cancelar"),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: Text("Abrir Configurações"),
+              onPressed: () {
+                openAppSettings(); // Opens app settings
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        ),
+      );
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -51,7 +139,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final userProvider = Provider.of<UserProvider>(context);
     final textTheme = Theme.of(context).textTheme;
 
-    // Show loading indicator if user data is still loading
     if (userProvider.isLoading || !userProvider.isUserDataLoaded) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -63,50 +150,44 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // If user data failed to load or user is null after load, redirect to login
     if (userProvider.user == null) {
-       Logger.warn("HomeScreen build: User is null after loading. Redirecting to login.");
-       // This scenario should ideally be handled by the StreamBuilder in main.dart,
-       // but as a fallback, we can navigate here.
-       // WidgetsBinding.instance.addPostFrameCallback((_) {
-       //   Navigator.pushReplacementNamed(context, '/login');
-       // });
-       // Or show an error screen
+       Logger.warning("HomeScreen build: User is null after loading. Redirecting to login.");
        return Scaffold(
-         body: Center(child: Text("Erro ao carregar dados do usuário.", style: textTheme.bodyMedium)),
+         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+         body: Center(child: Padding(
+           padding: const EdgeInsets.all(16.0),
+           child: Text("Erro ao carregar dados do usuário. Por favor, tente fazer login novamente.", textAlign: TextAlign.center, style: textTheme.bodyMedium?.copyWith(color: Colors.white)),
+         )),
        );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('LAMAFIA - ${userProvider.user?.displayName ?? 'Usuário'}'),
+        title: Text('FEDERACAO MADOUT - ${userProvider.user?.displayName ?? 'Usuário'}'), // Updated title
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none), // Use a real icon
+            icon: const Icon(Icons.notifications_none),
             tooltip: 'Notificações',
             onPressed: () {
               Logger.info("Notifications button pressed.");
-              // TODO: Implement navigation to notifications screen or show overlay
+              // TODO: Implement navigation or overlay
             },
           ),
-          // Optional: Add other actions like search or profile
         ],
       ),
       body: Container(
-        // Apply background based on selected tab
         decoration: BoxDecoration(
           image: DecorationImage(
             image: AssetImage(_backgroundImages[_selectedIndex % _backgroundImages.length]),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
-              Colors.black.withOpacity(0.6), // Darken background slightly
+              Colors.black.withOpacity(0.6),
               BlendMode.darken,
             ),
           ),
         ),
-        // Display the selected tab's content
-        child: IndexedStack( // Use IndexedStack to keep tab state
+        child: IndexedStack(
            index: _selectedIndex,
            children: _widgetOptions,
         ),
@@ -141,24 +222,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        // Use theme colors from BottomNavigationBarTheme for consistency
-        // backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
-        // selectedItemColor: Theme.of(context).bottomNavigationBarTheme.selectedItemColor,
-        // unselectedItemColor: Theme.of(context).bottomNavigationBarTheme.unselectedItemColor,
-        // type: Theme.of(context).bottomNavigationBarTheme.type,
-        // selectedLabelStyle: Theme.of(context).bottomNavigationBarTheme.selectedLabelStyle,
-        // unselectedLabelStyle: Theme.of(context).bottomNavigationBarTheme.unselectedLabelStyle,
       ),
-      // Remove or assign a real function to the FAB
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {
-      //     Logger.info("Floating Action Button pressed.");
-      //     // TODO: Implement action (e.g., start new chat, create mission)
-      //   },
-      //   backgroundColor: Theme.of(context).primaryColor,
-      //   child: const Icon(Icons.add, color: Colors.white),
-      //   tooltip: 'Nova Ação',
-      // ),
     );
   }
 }
+

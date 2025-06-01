@@ -1,59 +1,73 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum MessageType { text, image, audio, video } // Add other types as needed
+/// Modelo de dados para representar uma mensagem em um canal de chat de texto.
+enum MessageType { text, image, system } // Adicionar outros tipos se necessário (áudio, vídeo, etc.)
 
-class Message {
-  final String id; // Unique message ID
-  final String chatId; // ID of the chat room or conversation
-  final String senderId;
-  final String senderName; // Store sender name for display
-  final String? text; // Nullable for media messages
-  final String? mediaUrl; // URL for image, audio, video
-  final MessageType type;
-  final Timestamp timestamp;
-  final bool isRead; // Optional: track read status
+class MessageModel {
+  final String id; // ID único da mensagem (ID do documento Firestore)
+  final String channelId; // ID do canal de texto onde a mensagem foi enviada
+  final String senderId; // UID do remetente (ou 'system' para mensagens do sistema)
+  final String senderName; // Nome de exibição do remetente (denormalizado para UI)
+  final String? senderAvatarUrl; // URL do avatar do remetente (denormalizado)
+  final String textContent; // Conteúdo da mensagem (para tipo texto)
+  final String? imageUrl; // URL da imagem (para tipo imagem)
+  final MessageType type; // Tipo da mensagem (texto, imagem, sistema)
+  final Timestamp timestamp; // Quando a mensagem foi enviada
+  // Opcional: Adicionar status de leitura, reações, etc.
 
-  Message({
+  MessageModel({
     required this.id,
-    required this.chatId,
+    required this.channelId,
     required this.senderId,
     required this.senderName,
-    this.text,
-    this.mediaUrl,
+    this.senderAvatarUrl,
+    required this.textContent,
+    this.imageUrl,
     required this.type,
     required this.timestamp,
-    this.isRead = false,
   });
 
-  factory Message.fromJson(Map<String, dynamic> json) {
-    return Message(
-      id: json['id'] as String,
-      chatId: json['chatId'] as String,
-      senderId: json['senderId'] as String,
-      senderName: json['senderName'] as String,
-      text: json['text'] as String?,
-      mediaUrl: json['mediaUrl'] as String?,
-      type: MessageType.values.firstWhere(
-        (e) => e.toString() == json['type'],
-        orElse: () => MessageType.text, // Default to text if type is invalid
-      ),
-      timestamp: json['timestamp'] as Timestamp,
-      isRead: json['isRead'] as bool? ?? false,
+  /// Converte um documento do Firestore em um objeto MessageModel.
+  factory MessageModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return MessageModel(
+      id: doc.id,
+      channelId: data['channelId'] ?? '',
+      senderId: data['senderId'] ?? 'unknown',
+      senderName: data['senderName'] ?? 'Desconhecido',
+      senderAvatarUrl: data['senderAvatarUrl'],
+      textContent: data['textContent'] ?? '',
+      imageUrl: data['imageUrl'],
+      type: _stringToMessageType(data['type'] ?? 'text'),
+      timestamp: data['timestamp'] as Timestamp? ?? Timestamp.now(),
     );
   }
 
-  Map<String, dynamic> toJson() {
+  /// Converte o objeto MessageModel em um Map para salvar no Firestore.
+  Map<String, dynamic> toFirestore() {
     return {
-      'id': id,
-      'chatId': chatId,
+      'channelId': channelId,
       'senderId': senderId,
       'senderName': senderName,
-      'text': text,
-      'mediaUrl': mediaUrl,
-      'type': type.toString(),
-      'timestamp': timestamp,
-      'isRead': isRead,
+      if (senderAvatarUrl != null) 'senderAvatarUrl': senderAvatarUrl,
+      'textContent': textContent,
+      if (imageUrl != null) 'imageUrl': imageUrl,
+      'type': type.name, // Salva o nome do enum como string
+      'timestamp': timestamp, // Ou FieldValue.serverTimestamp()
     };
+  }
+
+  /// Converte uma string de volta para o enum MessageType.
+  static MessageType _stringToMessageType(String typeString) {
+    switch (typeString) {
+      case 'image':
+        return MessageType.image;
+      case 'system':
+        return MessageType.system;
+      case 'text':
+      default:
+        return MessageType.text;
+    }
   }
 }
 

@@ -131,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Use actual logo asset
                   Image.asset(
-                    'assets/images_png/1000216621.png', // Use the specified icon/logo
+                    'assets/images_png/app_icon_login_splash.jpg', // Use the specified icon/logo
                     height: 100,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                       Icons.shield_moon, // Fallback icon
