@@ -10,7 +10,7 @@ workflows:
     
 
     environment:
-      flutter: stable # Ou a versão específica do Flutter que você usa
+     # flutter: stable # Ou a versão específica do Flutter que você usa
       # Adicione outras variáveis de ambiente se necessário (ex: Java version)
 
     scripts:
