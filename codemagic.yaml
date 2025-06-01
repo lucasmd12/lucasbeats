@@ -4,8 +4,8 @@
 # Substitua os placeholders e ajuste conforme necessário.
 
 workflows:
-  android-debug-build-insecure: # Nome do seu workflow (sugestão: indicar que é inseguro)
-    name: Federacaomad Android Debug Build (google-services.json no repo)
+  #android-debug-build-insecure: # Nome do seu workflow (sugestão: indicar que é inseguro)
+    #name: Federacaomad Android Debug Build (google-services.json no repo)
     # Defina seus triggers (ex: push para o branch main)
     triggering:
       events:
@@ -36,7 +36,7 @@ workflows:
       - name: Construir APK Debug
         script: |
           # Garante que estamos no diretório raiz do projeto Flutter
-          cd $CM_BUILD_DIR
+          #cd $CM_BUILD_DIR
           flutter build apk --debug
 
     artifacts:
@@ -46,7 +46,7 @@ workflows:
       # Adicione configurações de publicação se desejar (ex: email, Slack, Google Play)
       email:
         recipients:
-          - seu_email@exemplo.com # Substitua pelo seu email
+          - lucasjuzahyder@gmail.com # Substitua pelo seu email
         notify:
           success: true
           failure: true
