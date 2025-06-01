@@ -7,12 +7,7 @@ workflows:
   #android-debug-build-insecure: # Nome do seu workflow (sugestão: indicar que é inseguro)
     #name: Federacaomad Android Debug Build (google-services.json no repo)
     # Defina seus triggers (ex: push para o branch main)
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: 'main'
-          include: true
+    
 
     environment:
       flutter: stable # Ou a versão específica do Flutter que você usa
