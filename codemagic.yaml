@@ -36,7 +36,7 @@ workflows:
       - name: Construir APK Debug
         script: |
           # Garante que estamos no diretório raiz do projeto Flutter
-          #cd $CM_BUILD_DIR
+          cd $CM_BUILD_DIR
           flutter build apk --debug
 
     artifacts:
