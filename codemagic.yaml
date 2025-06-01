@@ -9,7 +9,7 @@ workflows:
     # Defina seus triggers (ex: push para o branch main)
     
 
-    environment:
+    # environment:
      # flutter: stable # Ou a versão específica do Flutter que você usa
       # Adicione outras variáveis de ambiente se necessário (ex: Java version)
 
