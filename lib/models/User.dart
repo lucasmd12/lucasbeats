@@ -30,31 +30,26 @@ const UserSchema = new mongoose.Schema({
     enum: ["online", "offline", "away", "busy"],
     default: "offline"
   },
-  // Referência ao clã
   clan: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Clan",
     default: null
   },
-  // Papel do usuário dentro do clã
   clanRole: {
     type: String,
-    enum: ["Leader", "SubLeader", "member", "leader", "subleader", "member", null],
+    enum: ["Leader", "SubLeader", "member", null],
     default: null
   },
-  // Referência à federação
   federation: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Federation",
     default: null
   },
-  // Papel do usuário dentro da federação
   federationRole: {
     type: String,
-    enum: ["leaderMax", "member", null],
+    enum: ["leader", "subleader", "member", null],
     default: null
   },
-  // Papel global (ADM, ADM reivindicado, usuário comum, descolado)
   role: {
     type: String,
     enum: ["ADM", "adminReivindicado", "user", "descolado"],
@@ -65,7 +60,6 @@ const UserSchema = new mongoose.Schema({
   lastSeen: { type: Date, default: Date.now }
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
-// Pre-save hook para hash de senha
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   try {
@@ -77,7 +71,6 @@ UserSchema.pre("save", async function (next) {
   }
 });
 
-// Método para comparar senha
 UserSchema.methods.comparePassword = async function (enteredPassword) {
   const userWithPassword = await mongoose.model("User").findById(this._id).select("+password");
   if (!userWithPassword) {
@@ -86,10 +79,10 @@ UserSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, userWithPassword.password);
 };
 
+UserSchema.virtual("isOnline").get(function() {
+  return this.lastSeen && (new Date() - this.lastSeen < 5 * 60 * 1000);
+});
+
 module.exports = mongoose.model("User", UserSchema);
 
 
-UserSchema.virtual('isOnline').get(function() {
-  // Considera o usuário online se a última atividade foi nos últimos 5 minutos
-  return this.lastSeen && (new Date() - this.lastSeen < 5 * 60 * 1000);
-});

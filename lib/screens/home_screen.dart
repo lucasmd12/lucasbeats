@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:permission_handler/permission_handler.dart'; // Import permission_handler
-// CORREÇÃO: Importar UserModel
-// CORREÇÃO: Remover import não utilizado de UserProvider, pois os dados virão de AuthService/AuthProvider
-// import '../providers/user_provider.dart';
-import 'package:lucasbeatsfederacao/providers/auth_provider.dart'; // Usar AuthProvider
-import '../utils/logger.dart';
-
-// Import Tab Widgets
-import '../screens/tabs/home_tab.dart';
-import '../screens/tabs/members_tab.dart';
-import '../screens/tabs/missions_tab.dart';
-import '../screens/tabs/settings_tab.dart';
-import '../screens/tabs/chat_list_tab.dart';
-import '../screens/voice_rooms_screen.dart';
+import 'package:provider/provider';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:lucasbeatsfederacao/providers/auth_provider.dart';
+import 'package:lucasbeatsfederacao/utils/logger.dart';
+import 'package:lucasbeatsfederacao/screens/tabs/home_tab.dart';
+import 'package:lucasbeatsfederacao/screens/tabs/members_tab.dart';
+import 'package:lucasbeatsfederacao/screens/tabs/missions_tab.dart';
+import 'package:lucasbeatsfederacao/screens/tabs/settings_tab.dart';
+import 'package:lucasbeatsfederacao/screens/tabs/chat_list_tab.dart';
+import 'package:lucasbeatsfederacao/screens/voice_rooms_screen.dart';
+import 'package:lucasbeatsfederacao/screens/federation_list_screen.dart'; // Nova tela para listar federações
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,7 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0; // Default to Home tab
+  int _selectedIndex = 0;
 
   static const List<Widget> _widgetOptions = <Widget>[
     HomeTab(),
@@ -118,14 +114,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // CORREÇÃO: Usar AuthProvider para obter o usuário atual
     final authProvider = Provider.of<AuthProvider>(context);
     final currentUser = authProvider.currentUser;
     final textTheme = Theme.of(context).textTheme;
 
-    // CORREÇÃO: Verificar status do AuthProvider, não UserProvider
     if (authProvider.authStatus == AuthStatus.unknown) {
-      // Ainda verificando o estado de autenticação
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
@@ -136,11 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // CORREÇÃO: Verificar se currentUser é nulo após autenticação
     if (currentUser == null) {
        Logger.warning("HomeScreen build: User is null even though authenticated. This shouldn't happen.");
-       // Idealmente, o Consumer em main.dart já deveria ter redirecionado para Login
-       // Mas como fallback, mostramos uma mensagem de erro.
        return Scaffold(
          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
          body: Center(child: Padding(
@@ -152,7 +142,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // CORREÇÃO: Usar apenas o username do usuário atual com ícone pequeno
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -181,6 +170,18 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.account_tree),
+            tooltip: 'Federações',
+            onPressed: () {
+              Logger.info("Federations button pressed.");
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const FederationListScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.record_voice_over),
             tooltip: 'Salas de Voz',
@@ -252,4 +253,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
 

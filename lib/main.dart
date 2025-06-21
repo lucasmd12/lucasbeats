@@ -76,7 +76,6 @@ class FEDERACAOMADApp extends StatelessWidget {
     final authService = AuthService();
     final socketService = SocketService();
     final signalingService = SignalingService(socketService);
-    final clanService = ClanService(apiService, authService);
     final missionService = MissionService(apiService);
 
     return MultiProvider(
@@ -85,8 +84,8 @@ class FEDERACAOMADApp extends StatelessWidget {
         ChangeNotifierProvider<AuthService>.value(value: authService),
         Provider<SocketService>.value(value: socketService),
         ChangeNotifierProvider<SignalingService>.value(value: signalingService),
-        Provider<FederationService>.value(value: FederationService(apiService)),
-        Provider<ClanService>.value(value: clanService),
+        ChangeNotifierProvider<FederationService>(create: (context) => FederationService(apiService)),
+        ChangeNotifierProvider<ClanService>(create: (context) => ClanService(apiService, authService)),
         Provider<MissionService>.value(value: missionService),
         ChangeNotifierProvider<NotificationService>.value(value: NotificationService()),
         ChangeNotifierProvider<VoipService>(create: (context) => VoipService(context.read<ApiService>(), context.read<AuthService>())),
@@ -164,3 +163,5 @@ class FEDERACAOMADApp extends StatelessWidget {
     );
   }
 }
+
+

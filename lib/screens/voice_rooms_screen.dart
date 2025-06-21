@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider';
 import 'package:lucasbeatsfederacao/services/firebase_service.dart';
 import 'package:lucasbeatsfederacao/services/auth_service.dart';
 import 'package:lucasbeatsfederacao/services/voip_service.dart';
@@ -81,7 +81,7 @@ class _VoiceRoomsScreenState extends State<VoiceRoomsScreen> with SingleTickerPr
                 );
               }),
               const SizedBox(height: 16),
-              _buildActiveRoomsList('clan'),
+              _buildActiveRoomsList('clan', clanId: user.clan),
             ],
           ),
         );
@@ -112,7 +112,7 @@ class _VoiceRoomsScreenState extends State<VoiceRoomsScreen> with SingleTickerPr
                 );
               }),
               const SizedBox(height: 16),
-              _buildActiveRoomsList('federation'),
+              _buildActiveRoomsList('federation', federationId: user.federation),
             ],
           ),
         );
@@ -168,11 +168,11 @@ class _VoiceRoomsScreenState extends State<VoiceRoomsScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildActiveRoomsList(String roomType) {
+  Widget _buildActiveRoomsList(String roomType, {String? clanId, String? federationId}) {
     return Consumer<FirebaseService>(
       builder: (context, firebaseService, child) {
         return StreamBuilder<DatabaseEvent>(
-          stream: firebaseService.listenToActiveVoiceRooms(),
+          stream: firebaseService.listenToActiveVoiceRooms(roomType: roomType, clanId: clanId, federationId: federationId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -180,7 +180,7 @@ class _VoiceRoomsScreenState extends State<VoiceRoomsScreen> with SingleTickerPr
 
             if (snapshot.hasError) {
               Logger.error('Erro ao carregar salas ativas', error: snapshot.error);
-              return const Center(child: Text('Erro ao carregar salas ativas'));
+              return Center(child: Text('Erro ao carregar salas ativas: ${snapshot.error}'));
             }
 
             if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
@@ -260,11 +260,25 @@ class _VoiceRoomsScreenState extends State<VoiceRoomsScreen> with SingleTickerPr
 
       final displayName = user.username ?? 'Usuário Anônimo';
 
+      // Check if room is private and requires password
+      final roomDetails = await firebaseService.getVoiceRoomDetails(roomId);
+      String? password;
+
+      if (roomDetails != null && roomDetails['isPrivate'] == true) {
+        password = await _showPasswordDialog(context);
+        if (password == null) {
+          // User cancelled password entry
+          return;
+        }
+      }
+
       // Entrar na sala Jitsi
       await voipService.joinJitsiMeeting(
         roomName: roomId,
         userDisplayName: displayName,
         userEmail: user.email,
+        userAvatarUrl: user.avatar,
+        password: password, // Pass the password to Jitsi Meet
       );
 
       // Adicionar participante no Firebase
@@ -281,10 +295,44 @@ class _VoiceRoomsScreenState extends State<VoiceRoomsScreen> with SingleTickerPr
       Logger.error('Erro ao entrar na sala ativa', error: e, stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao entrar na sala. Tente novamente.')),
+          const SnackBar(content: Text('Erro ao entrar na sala. Verifique a senha e tente novamente.')),
         );
       }
     }
+  }
+
+  Future<String?> _showPasswordDialog(BuildContext context) async {
+    String? password;
+    await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Senha da Sala'),
+          content: TextField(
+            obscureText: true,
+            decoration: const InputDecoration(hintText: 'Digite a senha da sala'),
+            onChanged: (value) {
+              password = value;
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Entrar'),
+              onPressed: () {
+                Navigator.of(context).pop(password);
+              },
+            ),
+          ],
+        );
+      },
+    );
+    return password;
   }
 
   Widget? _buildFloatingActionButton() {
@@ -308,4 +356,5 @@ class _VoiceRoomsScreenState extends State<VoiceRoomsScreen> with SingleTickerPr
     );
   }
 }
+
 

@@ -41,11 +41,13 @@ class VoipService with ChangeNotifier {
 
       if (response != null && response['success'] == true) {
         final roomName = response['roomName'];
+        final jitsiToken = response['jitsiToken']; // Obter o token Jitsi do backend
         await joinJitsiMeeting(
           roomName: roomName,
           userDisplayName: _authService.currentUser!.username,
           userEmail: _authService.currentUser!.email,
           userAvatarUrl: _authService.currentUser!.avatar,
+          token: jitsiToken, // Passar o token Jitsi
         );
         return true;
       } else {
@@ -76,7 +78,7 @@ class VoipService with ChangeNotifier {
     }
   }
 
-  Future<void> acceptCall(String callId, String roomName) async {
+  Future<void> acceptCall(String callId, String roomName, String jitsiToken) async {
     Logger.info('Accepting call: $callId, room: $roomName');
     try {
       await _apiService.post(
@@ -92,6 +94,7 @@ class VoipService with ChangeNotifier {
         userDisplayName: _authService.currentUser!.username,
         userEmail: _authService.currentUser!.email,
         userAvatarUrl: _authService.currentUser!.avatar,
+        token: jitsiToken, // Passar o token Jitsi
       );
       onCallStateChanged?.call('accepted');
     } catch (e, s) {
@@ -106,16 +109,21 @@ class VoipService with ChangeNotifier {
     String? userAvatarUrl,
     bool audioMuted = false,
     bool videoMuted = true,
+    String? token, // Adicionar o token Jitsi
+    String? password, // Adicionar a senha da sala
   }) async {
     Logger.info('Attempting to join Jitsi meeting: $roomName');
 
     var options = JitsiMeetingOptions(
       roomNameOrUrl: roomName,
+      serverUrl: "https://meet.jit.si", // Definir o servidor Jitsi Meet
       userDisplayName: userDisplayName,
       userEmail: userEmail,
       userAvatarUrl: userAvatarUrl,
       isAudioMuted: audioMuted,
       isVideoMuted: videoMuted,
+      token: token, // Passar o token Jitsi para as opções
+      roomPassword: password, // Passar a senha da sala para as opções
       featureFlags: {
         "WELCOME_PAGE_ENABLED": false,
         "INVITE_ENABLED": false,
@@ -151,7 +159,8 @@ class VoipService with ChangeNotifier {
       },
     );
 
-    try {await JitsiMeetWrapper.joinMeeting(options: options);
+    try {
+      await JitsiMeetWrapper.joinMeeting(options: options);
       Logger.info('Successfully joined Jitsi meeting: $roomName');
       _currentCall = Call(
         id: roomName, // Usando o nome da sala como ID da chamada
@@ -231,7 +240,7 @@ class VoipService with ChangeNotifier {
     _callStartTime = DateTime.now();
     _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_currentCall?.status == CallStatus.active) {
-        _callDuration = DateTime.now().difference(_callStartTime!);
+        _callDuration = DateTime.now().difference(_callStartTime!); 
         notifyListeners();
       } else {
         _durationTimer?.cancel();
@@ -270,6 +279,5 @@ class VoipService with ChangeNotifier {
     super.dispose();
   }
 }
-
 
 
