@@ -37,8 +37,8 @@ class _ClanManagementScreenState extends State<ClanManagementScreen> with Ticker
         final currentUser = authProvider.currentUser;
         
         // Verificar se o usuário é líder de clã, admin de federação ou admin geral
-        if (currentUser?.role != Role.clanLeader && currentUser?.role != Role.federationAdmin && currentUser?.role != Role.adm) {
-          return Scaffold(
+        if (currentUser?.role != Role.clanLeader && currentUser?.role != Role.admMaster) {
+         return Scaffold(
             appBar: AppBar(
               title: const Text('Acesso Negado'),
               backgroundColor: Colors.red,

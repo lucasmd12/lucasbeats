@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucasbeatsfederacao/models/federation_model.dart';
-import 'package:lucasbeatsfederacao/models/role_model.dart'; // Import adicionado
+// Import adicionado
 
 class FederationLeaderPanelScreen extends StatelessWidget {
   final Federation federation;

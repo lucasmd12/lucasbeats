@@ -56,7 +56,7 @@ class _QRRCreateScreenState extends State<QRRCreateScreen> {
     final user = authProvider.currentUser;
 
     if (user != null) {
-      _canSelectEntity = user.role == Role.adm || user.role == Role.federationAdmin || user.role == Role.clanLeader;
+      _canSelectEntity = user.role == Role.admMaster || user.role == Role.admMaster || user.role == Role.clanLeader;
 
       if (!_canSelectEntity && user.clanId != null) {
         // For non-admins with a clan, pre-select their clan

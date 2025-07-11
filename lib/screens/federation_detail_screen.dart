@@ -45,7 +45,7 @@ class _FederationDetailScreenState extends State<FederationDetailScreen> {
     // Determine if the current user is the federation leader or ADM
     bool isFederationLeaderOrAdm = currentUser != null &&
         (currentUser.id == widget.federation.leader.id ||
-            currentUser.role == Role.adm);
+            currentUser.role == Role.admMaster);
 
     return Scaffold(
       appBar: AppBar(

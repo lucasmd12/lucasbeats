@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucasbeatsfederacao/models/clan_model.dart';
-import 'package:lucasbeatsfederacao/models/role_model.dart'; // Import adicionado
+// Import adicionado
 
 class ClanLeaderPanelScreen extends StatelessWidget {
   final Clan clan;

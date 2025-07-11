@@ -164,7 +164,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             leading: CircleAvatar(
               backgroundColor: _getRoleColor(user.role),
               child: Text(
-                user.username != null && user.username!.isNotEmpty ? user.username![0].toUpperCase() : '?',
+                user.username.isNotEmpty ? user.username[0].toUpperCase() : '?',
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
@@ -724,11 +724,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
               color: _getLogColor(log["type"]),
             ),
             title: Text(
-              log["message"] ?? "Log sem mensagem",
+              log.containsKey("message") ? log["message"] : "Log sem mensagem",
               style: const TextStyle(color: Colors.white),
             ),
             subtitle: Text(
-              log["timestamp"] ?? "Sem timestamp",
+              log.containsKey("timestamp") ? log["timestamp"] : "Sem timestamp",
               style: const TextStyle(color: Color(0xFFBDBDBD)),
             ),
           ),
@@ -1187,11 +1187,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
               }
               try {
                 final clanService = Provider.of<ClanService>(context, listen: false);
-                final success = await clanService.createClan(
-                  nameController.text,
-                  tagController.text,
-                  selectedLeader!.id,
-                );
+                final success = await clanService.createClan({
+ 'name': nameController.text,
+ 'tag': tagController.text,
+ 'leaderId': selectedLeader!.id,
+ });
                 if (success) {
                   _showSnackBar('Clã "${nameController.text}" criado com sucesso!');
                   _loadClans(); // Recarregar a lista de clãs
@@ -1377,17 +1377,17 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                         else
                           ...clanMembers.map((member) => ListTile(
                             title: Text(member.username ?? 'Usuário Desconhecido', style: const TextStyle(color: Colors.white)),
-                            subtitle: Text('Papel: ${member.clanRole.displayName}', style: const TextStyle(color: Colors.white70)),
+                            subtitle: Text('Papel: ${member.clanRole?.displayName ?? 'N/A'}', style: const TextStyle(color: Colors.white70)),
                             trailing: PopupMenuButton<String>(
                               onSelected: (action) => _handleClanMemberAction(clan, member, action, setState), // Passar setState
                               itemBuilder: (context) => <PopupMenuEntry<String>>[
-                                if (member.clanRole != ClanRole.leader) // Não pode rebaixar o líder
+                                if ((member.clanRole != Role.clanLeader) as bool) // Não pode rebaixar o líder
                                   const PopupMenuItem<String>(
-                                    value: "promote",
+                                    value: "promote_leader",
                                     child: Text("Promover a Líder"),
                                   ),
-                                if (member.clanRole != ClanRole.member) // Não pode promover o membro
-                                  const PopupMenuItem<String>(
+                                if ((member.clanRole != Role.clanMember) as bool) // Não pode promover o membro
+                                  const PopupMenuItem<String>( // Add const
                                     value: "demote",
                                     child: Text("Rebaixar a Membro"),
                                   ),
@@ -1434,9 +1434,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
     try {
       final apiService = ApiService();
       String endpoint;
-      Map<String, dynamic> body = {};
-
+      // Map<String, dynamic> body = {}; // Removed unused variable
       switch (action) {
+        case "promote_leader": // Changed from "promote"
         case "promote":
           endpoint = "/api/admin/clans/${clan.id}/members/${member.id}/promote";
           break;
@@ -1450,13 +1450,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
           return;
       }
 
-      final response = await apiService.post(endpoint, body); // Assumindo POST para essas ações
+      final response = await apiService.post(endpoint, {}); // Assumindo POST para essas ações, body vazio conforme exemplo
 
       if (response["success"] == true) {
-        _showSnackBar('Membro ${member.username ?? 'Usuário'} ${action == "promote" ? "promovido" : action == "demote" ? "rebaixado" : "removido"} com sucesso!');
+        _showSnackBar('Membro ${member.username ?? 'Usuário'} ${action == "promote_leader" ? "promovido" : action == "demote" ? "rebaixado" : "removido"} com sucesso!'); // Updated action message
         // Recarregar membros do clã dentro do diálogo
         List<User> updatedClanMembers = (response["members"] as List) // Assumindo que a API retorna a lista atualizada
-            .map((user) => User.fromJson(user))
+            .map((user) => User.fromJson(user)) // Corrected variable name
             .toList();
         List<User> updatedAvailableUsers = _allUsers.where((user) => !updatedClanMembers.any((m) => m.id == user.id)).toList();
         setState(() {
@@ -1587,9 +1587,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
               try {
                 final federationService = Provider.of<FederationService>(context, listen: false);
                 final success = await federationService.createFederation(
-                  nameController.text,
-                  tagController.text,
-                  selectedLeader!.id,
+                  {'name': nameController.text, 'tag': tagController.text, 'leaderId': selectedLeader!.id,},
                 );
                 if (success) {
                   _showSnackBar('Federação "${nameController.text}" criada com sucesso!');
@@ -1800,16 +1798,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                         else
                           ...federationMembers.map((member) => ListTile(
                             title: Text(member.username ?? 'Usuário Desconhecido', style: const TextStyle(color: Colors.white)),
-                            subtitle: Text('Papel: ${member.federationRole.displayName}', style: const TextStyle(color: Colors.white70)),
+                            subtitle: Text('Papel: ${member.federationRole?.displayName ?? 'N/A'}', style: const TextStyle(color: Colors.white70)),
                             trailing: PopupMenuButton<String>(
                               onSelected: (action) => _handleFederationMemberAction(federation, member, action, setState), // Passar setState
                               itemBuilder: (context) => <PopupMenuEntry<String>>[
-                                if (member.federationRole != FederationRole.leader) // Não pode rebaixar o líder
+                                if ((member.federationRole != Role.leader) as bool) // Não pode rebaixar o líder
                                   const PopupMenuItem<String>(
-                                    value: "promote",
+                                    value: "promote_leader",
                                     child: Text("Promover a Líder"),
                                   ),
-                                if (member.federationRole != FederationRole.member) // Não pode promover o membro
+                                if ((member.federationRole != Role.member) as bool) // Não pode promover o membro
                                   const PopupMenuItem<String>(
                                     value: "demote",
                                     child: Text("Rebaixar a Membro"),
@@ -1857,9 +1855,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
     try {
       final apiService = ApiService();
       String endpoint;
-      Map<String, dynamic> body = {};
-
+      // Map<String, dynamic> body = {}; // Removed unused variable
       switch (action) {
+        case "promote_leader": // Changed from "promote"
         case "promote":
           endpoint = "/api/admin/federations/${federation.id}/members/${member.id}/promote";
           break;
@@ -1873,13 +1871,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
           return;
       }
 
-      final response = await apiService.post(endpoint, body); // Assumindo POST para essas ações
+      final response = await apiService.post(endpoint, {}); // Assumindo POST para essas ações, body vazio conforme example
 
       if (response["success"] == true) {
-        _showSnackBar('Membro ${member.username ?? 'Usuário'} ${action == "promote" ? "promovido" : action == "demote" ? "rebaixado" : "removido"} com sucesso!');
+        _showSnackBar('Membro ${member.username ?? 'Usuário'} ${action == "promote_leader" ? "promovido" : action == "demote" ? "rebaixado" : "removido"} com sucesso!'); // Updated action message
         // Recarregar membros da federação dentro do diálogo
         List<User> updatedFederationMembers = (response["members"] as List)
-            .map((user) => User.fromJson(user))
+            .map((user) => User.fromJson(user)) // Corrected variable name
             .toList();
         List<User> updatedAvailableUsers = _allUsers.where((user) => !updatedFederationMembers.any((m) => m.id == user.id)).toList();
         setState(() {

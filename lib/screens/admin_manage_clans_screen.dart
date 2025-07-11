@@ -202,7 +202,7 @@ class _AdminManageClansScreenState extends State<AdminManageClansScreen> {
                       ..._availableFederations.map((federation) {
                         return DropdownMenuItem<String?>(
                           value: federation.id,
-                          child: Text(federation.name ?? 'Federação sem nome'),
+                          child: Text(federation.name),
                         );
                       }).toList(),
                     ],
