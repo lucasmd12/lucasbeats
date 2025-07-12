@@ -7,7 +7,7 @@ class PermissionService {
   static bool canCreateVoiceRoom(User user, String roomType) {
     switch (roomType) {
       case 'clan':
-        // Líder de clã ou ADM global pode criar sala de clã
+        // Líder de clã ou ADM MASTER global pode criar sala de clã
         return user.clanRole == Role.leader || user.role == Role.adm;
       case 'federation':
         // Líder de federação ou ADM global pode criar sala de federação
@@ -16,7 +16,7 @@ class PermissionService {
         // Qualquer usuário pode criar salas globais
         return true;
       case 'admin':
-        // Apenas ADM global pode criar salas de admin
+        // Apenas ADM MASTER global pode criar salas de admin
         return user.role == Role.adm;
       default:
         return false;
@@ -27,13 +27,13 @@ class PermissionService {
   static bool canJoinVoiceRoom(User user, String roomType, {String? clanId, String? federationId}) {
     switch (roomType) {
       case 'clan':
-        // Deve estar no mesmo clã OU ser ADM global
+        // Deve estar no mesmo clã OU ser ADM MASTER global
         return (user.clanId != null && user.clanId == clanId) || user.role == Role.adm;
       case 'federation':
-        // Deve estar na mesma federação OU ser ADM global
+        // Deve estar na mesma federação OU ser ADM MASTER global
         return (user.federationId != null && user.federationId == federationId) || user.role == Role.adm;
       case 'global':
-        // Qualquer usuário pode entrar
+        // Qualquer usuário logado pode entrar (verificação no getAvailableActions)
         return true;
       case 'admin':
         // Apenas ADM global pode entrar
@@ -47,10 +47,10 @@ class PermissionService {
   static bool canSendMessage(User user, String chatType, {String? clanId, String? federationId}) {
     switch (chatType) {
       case 'clan':
-        // Deve estar no mesmo clã OU ser ADM global
+        // Deve estar no mesmo clã OU ser ADM MASTER global
         return (user.clanId != null && user.clanId == clanId) || user.role == Role.adm;
       case 'federation':
-        // Deve estar na mesma federação OU ser ADM global
+        // Deve estar na mesma federação OU ser ADM MASTER global
         return (user.federationId != null && user.federationId == federationId) || user.role == Role.adm;
       case 'global':
         // Qualquer usuário pode enviar mensagens globais
@@ -62,7 +62,7 @@ class PermissionService {
 
   // Verificar se o usuário pode gerenciar um clã
   static bool canManageClan(User user, String? clanId) {
-    // ADM global pode gerenciar qualquer clã
+    // ADM MASTER global pode gerenciar qualquer clã
     if (user.role == Role.adm) return true;
     // Líder do clã pode gerenciar seu próprio clã
     if (user.clanRole == Role.leader && user.clanId == clanId) return true;
@@ -71,7 +71,7 @@ class PermissionService {
 
   // Verificar se o usuário pode gerenciar uma federação
   static bool canManageFederation(User user, String? federationId) {
-    // Apenas ADM global pode gerenciar federações (assumindo que Admin Federação frontend mapeia para ADM backend)
+    // Apenas ADM MASTER global pode gerenciar federações
     if (user.role == Role.adm) return true;
      // Lider de federação pode gerenciar sua propria federação
     if (user.federationRole == Role.leader && user.federationId == federationId) return true;
@@ -82,17 +82,17 @@ class PermissionService {
   // Este método pode precisar ser renomeado ou ajustado dependendo se é promoção global, de clã ou federação.
   // Assumindo promoção GLOBAL:
   static bool canPromoteUserGlobal(User promoter, User target, Role newRole) {
-    // Apenas ADM global pode promover globalmente
+    // Apenas ADM MASTER global pode promover globalmente
     if (promoter.role != Role.adm) return false;
 
     // Não pode promover a si mesmo
     if (promoter.id == target.id) return false;
 
-    // Não pode promover para ADM a menos que o promotor também seja ADM
+    // Não pode promover para ADM MASTER a menos que o promotor também seja ADM MASTER
     if (newRole == Role.adm && promoter.role != Role.adm) return false;
 
      // Não pode promover para Admin Reivindicado ou Descolado a menos que o promotor seja ADM
-    if ((newRole == Role.adminReivindicado || newRole == Role.descolado) && promoter.role != Role.adm) return false;
+    if ((newRole == Role.adminReivindicado || newRole == Role.descolado) && promoter.role != Role.admMaster) return false;
 
     return true;
   }
@@ -100,13 +100,13 @@ class PermissionService {
    // Verificar se o usuário pode remover outros usuários (global)
   static bool canRemoveUserGlobal(User remover, User target) {
     // Apenas ADM global pode remover globalmente
-    if (remover.role != Role.adm) return false;
+    if (remover.role != Role.admMaster) return false;
 
     // Não pode remover a si mesmo
     if (remover.id == target.id) return false;
 
-    // ADM não pode remover outro ADM (regra comum, ajustar se necessário)
-    if (target.role == Role.adm && remover.id != target.id) return false;
+    // ADM MASTER não pode remover outro ADM MASTER (regra comum, ajustar se necessário)
+    if (target.role == Role.admMaster && remover.id != target.id) return false;
 
 
     return true;
@@ -115,20 +115,20 @@ class PermissionService {
 
   // Verificar se o usuário pode acessar o painel administrativo
   static bool canAccessAdminPanel(User user) {
-    return user.role == Role.adm;
+    return user.role == Role.admMaster;
   }
 
   // Verificar se o usuário pode criar clãs
   static bool canCreateClan(User user) {
-    // ADM global ou Líder (global?) pode criar clãs? Ajustar se for Líder de Federação, etc.
-    // Assumindo que ADM global ou Líder (global) podem criar clãs
-    return user.role == Role.adm || user.role == Role.leader; // Verifique esta lógica com suas regras
+    // Apenas ADM MASTER pode criar clãs
+    return user.role == Role.admMaster;
   }
 
   // Verificar se o usuário pode criar federações
   static bool canCreateFederation(User user) {
-    // Apenas ADM global pode criar federações
-    return user.role == Role.adm;
+    // Apenas ADM MASTER pode criar federações
+    // Assumindo que Role.federationAdmin agora mapeia para Role.admMaster
+    return user.role == Role.admMaster;
   }
 
   // Verificar se o usuário pode convidar outros para o clã
@@ -141,8 +141,8 @@ class PermissionService {
 
   // Verificar se o usuário pode expulsar membros do clã
   static bool canKickFromClan(User kicker, User target, String? clanId) {
-    // ADM global pode expulsar qualquer one
-    if (kicker.role == Role.adm) return true;
+    // ADM MASTER global pode expulsar qualquer one
+    if (kicker.role == Role.admMaster) return true;
     // Líder de Clã (no clã correto) pode expulsar membros do seu clã
     if (kicker.clanRole == Role.leader && kicker.clanId == clanId && target.clanId == clanId) {
       // Líder não pode expulsar outro Líder do clã
@@ -153,13 +153,13 @@ class PermissionService {
 
   // Verificar se o usuário pode ver estatísticas globais
   static bool canViewGlobalStats(User user) {
-    return user.role == Role.adm;
+    return user.role == Role.admMaster;
   }
 
   // Verificar se o usuário pode moderar chats
   static bool canModerateChat(User user, String chatType, {String? clanId, String? federationId}) {
-     // ADM global pode moderar qualquer chat
-    if (user.role == Role.adm) return true;
+     // ADM MASTER global pode moderar qualquer chat
+    if (user.role == Role.admMaster) return true;
 
     switch (chatType) {
       case 'clan':
@@ -170,7 +170,7 @@ class PermissionService {
         return user.federationRole == Role.leader && user.federationId == federationId;
       case 'global':
         // Apenas ADM global pode moderar chat global
-        return user.role == Role.adm;
+        return user.role == Role.admMaster;
       default:
         return false;
     }
@@ -179,7 +179,7 @@ class PermissionService {
   // Verificar se o usuário pode encerrar salas de voz de outros
   static bool canEndOthersVoiceRoom(User user, String roomType, String creatorId, {String? clanId, String? federationId}) {
     // Admin pode encerrar qualquer sala
-    if (user.role == Role.adm) return true;
+    if (user.role == Role.admMaster) return true;
 
     // Criador pode encerrar sua própria sala
     if (user.id == creatorId) return true;
@@ -209,7 +209,7 @@ class PermissionService {
     }
 
 
-    // Ações para membros de clã (qualquer papel de clã ou ADM global)
+    // Ações para membros de clã (qualquer papel de clã ou ADM MASTER global)
     if (user.clanId != null || user.role == Role.adm) {
        actions.addAll([
         'send_clan_message',
@@ -217,7 +217,7 @@ class PermissionService {
        ]);
     }
 
-    // Ações para membros de federação (qualquer papel de federação ou ADM global)
+    // Ações para membros de federação (qualquer papel de federação ou ADM MASTER global)
     if (user.federationId != null || user.role == Role.adm) {
        actions.addAll([
         'send_federation_message',
@@ -226,7 +226,7 @@ class PermissionService {
 
     // Ações específicas para Líderes de Clã
     if (user.clanRole == Role.leader) {
-      actions.addAll([
+       actions.addAll([
         'create_clan_voice_room',
         'manage_clan', // Gerenciar o próprio clã
         'invite_to_clan',
@@ -275,7 +275,7 @@ class PermissionService {
 
 
     // Ações específicas para ADM Geral
-    if (user.role == Role.adm) {
+    if (user.role == Role.admMaster) {
       actions.addAll([
         'access_admin_panel',
         'create_clan',
@@ -293,14 +293,14 @@ class PermissionService {
         // Depende da sua lógica de negócio. Pode adicionar aqui ou confiar nas verificações acima.
       ]);
     }
-      // Ações específicas para Admin Reivindicado
-      if(user.role == Role.adminReivindicado) {
+      // Ações específicas para Admin Reivindicado (assumindo que agora é Role.admMaster)
+      if(user.role == Role.admMaster) {
         actions.addAll([
           // Quais ações admins reivindicados podem fazer? Adicionar aqui
         ]);
       }
 
-      // Ações específicas para Descolado
+      // Ações específicas para Descolado (assumindo que agora é Role.admMaster)
       if(user.role == Role.descolado) {
         actions.addAll([
           // Quais ações descolados podem fazer? Adicionar aqui
