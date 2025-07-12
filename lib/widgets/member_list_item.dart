@@ -12,6 +12,7 @@ class MemberListItem extends StatelessWidget {
   final User currentUser;
   final Function(Member, String) onMemberAction;
   final bool canManage;
+  final String? clanFlagUrl; // Adicionado
 
   const MemberListItem({
     super.key,
@@ -19,6 +20,7 @@ class MemberListItem extends StatelessWidget {
     required this.currentUser, 
     required this.onMemberAction,
     this.canManage = false,
+    this.clanFlagUrl, // Adicionado
   });
 
   @override
@@ -64,6 +66,16 @@ class MemberListItem extends StatelessWidget {
         ),
         title: Row(
           children: [
+            if (clanFlagUrl != null && clanFlagUrl!.isNotEmpty) // Exibe a bandeira se a URL existir
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0), // Espaço à direita da bandeira
+                child: Image.network(
+                  clanFlagUrl!,
+                  width: 24, // Ajuste o tamanho conforme necessário
+                  height: 24, // Ajuste o tamanho conforme necessário
+                  errorBuilder: (context, error, stackTrace) => Icon(Icons.flag, color: Colors.grey), // Ícone de placeholder em caso de erro
+                ),
+              ),
             Expanded(
               child: Text(
                 member.username,
@@ -72,6 +84,17 @@ class MemberListItem extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+            ),
+            if (member.federationTag != null && member.federationTag!.isNotEmpty) // Exibe a tag da federação se existir
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0), // Espaço à esquerda da tag
+                child: Text(
+                  '[${member.federationTag}]',
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 12, // Ajuste o tamanho conforme necessário
+                  ),
+                ),
             ),
             const SizedBox(width: 8),
             Container(

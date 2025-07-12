@@ -6,12 +6,14 @@ class Member {
   final String avatarUrl;
   final Role role;
   final bool isOnline;
+  final String? federationTag;
 
   Member({
     required this.id,
     required this.username,
     required this.avatarUrl,
     required this.role,
+    this.federationTag,
     this.isOnline = false,
   });
 
@@ -22,6 +24,7 @@ class Member {
       avatarUrl: json['avatar'] as String? ?? 'https://via.placeholder.com/150',
       role: roleFromString(json["clanRole"] as String? ?? "member"),
       isOnline: json['isOnline'] as bool? ?? false,
+      federationTag: json['federationTag'] as String?,
     );
   }
 }

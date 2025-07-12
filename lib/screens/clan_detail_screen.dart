@@ -29,7 +29,7 @@ class _ClanDetailScreenState extends State<ClanDetailScreen> {
         length: 2, // Número de tabs
         child: TabBarView( // TabBarView para exibir o conteúdo das tabs
           children: [
-            MembersTab(clanId: widget.clan.id), // Passa o clanId para MembersTab
+            MembersTab(clanId: widget.clan.id, clan: widget.clan), // Apenas uma instância, passando o clan
             SettingsTab(clanId: widget.clan.id), // Passa o clanId para SettingsTab
           ],
         ),

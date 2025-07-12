@@ -5,6 +5,7 @@ import 'package:lucasbeatsfederacao/models/role_model.dart';
 import 'package:lucasbeatsfederacao/services/clan_service.dart';
 import 'package:lucasbeatsfederacao/services/invite_service.dart';
 import 'package:lucasbeatsfederacao/services/user_service.dart';
+import 'package:lucasbeatsfederacao/models/clan_model.dart'; // Import Clan model
 import 'package:lucasbeatsfederacao/models/member_model.dart';
 import 'package:lucasbeatsfederacao/utils/logger.dart';
 import 'package:lucasbeatsfederacao/services/socket_service.dart'; // Import SocketService
@@ -14,7 +15,8 @@ import 'dart:async'; // Import for StreamSubscription
 class MembersTab extends StatefulWidget { 
   final String clanId;
 
-  const MembersTab({super.key, required this.clanId});
+  final Clan clan; // Adicionado
+  const MembersTab({super.key, required this.clanId, required this.clan}); // clan agora é required
 
   @override
   State<MembersTab> createState() => _MembersTabState();
@@ -447,6 +449,7 @@ class _MembersTabState extends State<MembersTab> {
                             currentUser: currentUser!,
                             onMemberAction: _handleMemberAction,
                             canManage: canManageMembers,
+                            clanFlagUrl: widget.clan.flag, // Passa a URL da bandeira do clã
                           );
                         },
                       ),

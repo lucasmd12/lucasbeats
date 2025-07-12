@@ -72,7 +72,7 @@ class Clan {
       id: map["_id"] ?? "",
       name: map["name"] ?? "",
       tag: map["tag"] ?? "",
-      leaderId: map["leader"] ?? map["leaderId"] ?? "", // Ajustado para corresponder ao backend
+      leaderId: map["leader"] != null && map["leader"] is Map ? map["leader"]["_id"] as String? ?? "" : map["leader"] as String? ?? map["leaderId"] as String? ?? "", // Tenta ler como objeto User e depois como String
       description: map["description"],
       bannerImageUrl: map["banner"], // Mapeando de 'banner' do backend
       flag: map["flag"], // Adicionado
