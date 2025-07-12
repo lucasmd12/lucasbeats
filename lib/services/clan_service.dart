@@ -338,4 +338,23 @@ class ClanService with ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> transferClanLeadership(String clanId, String newLeaderUserId) async {
+    Logger.info('Attempting to transfer leadership for clan ID: $clanId to user ID: $newLeaderUserId');
+    try {
+      final response = await _apiService.put('/api/clans/$clanId/leader', {'newLeaderId': newLeaderUserId}, requireAuth: true);
+      if (response != null && (response is Map<String, dynamic> && response.containsKey('success') && response['success'] == true || response == '')) {
+        Logger.info('Clan ID $clanId leadership transferred successfully to user ID $newLeaderUserId.');
+        return true;
+      } else {
+        Logger.warning('Failed to transfer leadership for clan ID $clanId. Response: $response');
+        return false;
+      }
+    } catch (e, s) {
+      Logger.error('Error transferring clan leadership for clan ID $clanId:', error: e, stackTrace: s);
+      return false;
+    }
+  }
+
+
 }

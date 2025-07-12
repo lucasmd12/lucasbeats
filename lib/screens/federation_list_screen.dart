@@ -4,6 +4,7 @@ import 'package:lucasbeatsfederacao/services/federation_service.dart';
 import 'package:lucasbeatsfederacao/utils/logger.dart';
 import 'package:lucasbeatsfederacao/providers/auth_provider.dart';
 import 'package:lucasbeatsfederacao/models/role_model.dart';
+import 'package:lucasbeatsfederacao/models/federation_model.dart'; // Importar Federation
 import 'package:lucasbeatsfederacao/screens/federation_detail_screen.dart';
 
 class FederationListScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class FederationListScreen extends StatefulWidget {
 class _FederationListScreenState extends State<FederationListScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _leaderUsernameController = TextEditingController();
 
   @override
   void initState() {
@@ -130,6 +132,55 @@ class _FederationListScreenState extends State<FederationListScreen> {
     );
   }
 
+  void _showTransferLeadershipDialog(Federation federation) {
+    _leaderUsernameController.clear();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF212121),
+          title: Text('Transferir Liderança de ${federation.name}', style: TextStyle(color: Colors.white)),
+          content: TextField(
+            controller: _leaderUsernameController,
+            decoration: const InputDecoration(
+              labelText: 'Nome de usuário do novo líder',
+              labelStyle: TextStyle(color: Colors.white70),
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white30)),
+              focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blueAccent)),
+            ),
+            style: const TextStyle(color: Colors.white),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Transferir', style: TextStyle(color: Colors.blueAccent)),
+              onPressed: () async {
+                final String newLeaderUsername = _leaderUsernameController.text.trim();
+                if (newLeaderUsername.isEmpty) {
+                  _showSnackBar('O nome de usuário do novo líder não pode ser vazio.', isError: true);
+                  return;
+                }
+                Navigator.of(context).pop(); // Dismiss dialog
+
+                try {
+                  final federationService = Provider.of<FederationService>(context, listen: false);
+                  final success = await federationService.transferFederationLeadership(federation.id, newLeaderUsername);
+                   _showSnackBar(success ? 'Liderança da Federação transferida com sucesso!' : 'Falha ao transferir a liderança da Federação.', isError: !success);
+                } catch (e, s) {
+                   Logger.error('Error transferring federation leadership:', error: e, stackTrace: s);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -170,6 +221,15 @@ class _FederationListScreenState extends State<FederationListScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                       // Botão de Transferir Liderança visível apenas para ADM_MASTER
+                      if (isAdmMaster)
+                        IconButton(
+                          icon: const Icon(Icons.transfer_within_a_station, color: Colors.orangeAccent), // Ícone de transferência
+                          onPressed: () {
+                            _showTransferLeadershipDialog(federation);
+                          },
+                          tooltip: 'Transferir Liderança',
+                        ),
                       // Botão de exclusão visível apenas para ADM_MASTER
                       if (isAdmMaster)
                         IconButton(
@@ -230,6 +290,7 @@ class _FederationListScreenState extends State<FederationListScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _leaderUsernameController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }

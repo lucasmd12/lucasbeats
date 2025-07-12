@@ -148,19 +148,21 @@ class FederationService extends ChangeNotifier {
     return false;
   }
 
-  Future<bool> transferLeadership(String federationId, String userId) async {
+  Future<bool> transferFederationLeadership(String federationId, String newLeaderUserId) async {
     try {
-      final response = await _apiService.put("/api/federations/$federationId/transfer/$userId", {}, requireAuth: true);
-      if (response != null && response["success"] == true) {
-        notifyListeners();
+      final response = await _apiService.put('/api/federations/$federationId/leader', {'newLeaderId': newLeaderUserId}, requireAuth: true);
+      if (response != null && (response is Map<String, dynamic> && response.containsKey('success') && response['success'] == true || response == '')) { // Handle success for both JSON and empty responses
+        Logger.info('Federation $federationId leadership transferred successfully to $newLeaderUserId.');
         return true;
+      } else {
+        Logger.warning('Failed to transfer leadership for federation $federationId: ${response["msg"] ?? "Unknown error"}');
+        return false;
       }
-    } catch (e) {
-      debugPrint("Error transferring leadership: $e");
+    } catch (e, s) {
+      Logger.error('Error transferring federation leadership:', error: e, stackTrace: s);
+      return false;
     }
-    return false;
   }
-
   Future<bool> addAlly(String federationId, String allyId) async {
     try {
       final response = await _apiService.put("/api/federations/$federationId/ally/$allyId", {}, requireAuth: true);

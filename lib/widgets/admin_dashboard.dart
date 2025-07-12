@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucasbeatsfederacao/models/user_model.dart';
 import 'package:lucasbeatsfederacao/widgets/admin_notification_dialog.dart';
+import 'package:lucasbeatsfederacao/screens/admin_manage_clans_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
   final User currentUser;
@@ -353,19 +354,7 @@ class AdminDashboard extends StatelessWidget {
   }
 
   void _manageClans(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Gerenciar Clãs'),
-        content: const Text('Funcionalidade em desenvolvimento.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminManageClansScreen()));
   }
 
   void _viewReports(BuildContext context) {

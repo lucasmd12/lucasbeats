@@ -3,8 +3,10 @@ import 'package:lucasbeatsfederacao/models/role_model.dart';
 import 'package:provider/provider.dart';
 import 'package:lucasbeatsfederacao/services/federation_service.dart';
 import '../../widgets/custom_snackbar.dart'; // Assuming the path
+import 'package:lucasbeatsfederacao/screens/admin_manage_users_screen.dart'; // Import the new screen
 import '../screens/admin_manage_clans_screen.dart';
 import 'package:lucasbeatsfederacao/screens/clan_management_screen.dart';
+import 'package:lucasbeatsfederacao/screens/federation_list_screen.dart'; // Import FederationListScreen
 
 class QuickActionsWidget extends StatelessWidget {
   final Role userRole;
@@ -69,20 +71,19 @@ class QuickActionsWidget extends StatelessWidget {
       children: [
         _buildActionButton(
           context,
-          'Painel ADM',
-          Icons.admin_panel_settings,
-          Colors.red,
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AdminManageClansScreen()),
- ),
-        ),
-        _buildActionButton(
-          context,
           'Criar Federação',
           Icons.group_work,
           Colors.purple,
-          () => _showCreateFederationDialog(context),
+          () => _showCreateFederationDialog(context), // Chamando a função do diálogo
+        ),
+        _buildActionButton(
+          context,
+          'Gerenciar Federações',
+          Icons.account_tree, // Appropriate icon
+          Colors.blueGrey, // Color
+          () => Navigator.push( // Navigate to FederationListScreen
+            context,
+            MaterialPageRoute(builder: (context) => const FederationListScreen())),
         ),
         _buildActionButton(
           context,
@@ -99,7 +100,9 @@ class QuickActionsWidget extends StatelessWidget {
           'Promover Usuário',
           Icons.person_add,
           Colors.green,
-          () => _showPromoteUserDialog(context),
+          () => Navigator.push( // Navigate to the new screen
+            context,
+            MaterialPageRoute(builder: (context) => const AdminManageUsersScreen())),
         ),
         _buildActionButton(
           context,

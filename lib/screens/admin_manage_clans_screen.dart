@@ -358,6 +358,58 @@ class _AdminManageClansScreenState extends State<AdminManageClansScreen> {
     );
   }
 
+  void _showTransferLeadershipDialog(Clan clan) {
+    final TextEditingController newLeaderUsernameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Transferir Liderança do Clã: ${clan.name}'),
+          content: TextField(
+            controller: newLeaderUsernameController,
+            decoration: const InputDecoration(hintText: 'Nome de usuário do novo líder'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Transferir'),
+              onPressed: () async {
+                final newLeaderUsernameOrId = newLeaderUsernameController.text.trim();
+                if (newLeaderUsernameOrId.isEmpty) {
+                  _showSnackBar('O nome de usuário ou ID do novo líder não pode ser vazio.', isError: true);
+                  return;
+                }
+                Navigator.of(context).pop(); // Dismiss dialog
+
+                try {
+                  final clanService = Provider.of<ClanService>(context, listen: false);
+                  // Assumindo que o input é o ID do usuário para simplificar por agora.
+                  // Se a API esperar o username, a lógica aqui precisará buscar o ID do usuário pelo username primeiro.
+                  final success = await clanService.transferClanLeadership(clan.id, newLeaderUsernameOrId);
+
+                  if (success) {
+                    _showSnackBar('Liderança do clã "${clan.name}" transferida com sucesso!');
+                    // Opcional: Recarregar a lista de clãs para refletir a mudança de líder
+                    _loadClans();
+                  } else {
+                    _showSnackBar('Falha ao transferir a liderança do clã.', isError: true);
+                  }
+                } catch (e, s) {
+                  Logger.error('Error transferring clan leadership:', error: e, stackTrace: s);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showDeleteClanConfirmationDialog(Clan clan) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUser = authProvider.currentUser;
@@ -435,6 +487,11 @@ class _AdminManageClansScreenState extends State<AdminManageClansScreen> {
      return _currentUser!.role == Role.admMaster;
   }
 
+  // Helper to check transfer leadership permission for a given clan (only ADM_MASTER)
+   bool _canTransferLeadership() {
+     if (_currentUser == null) return false;
+     return _currentUser!.role == Role.admMaster;
+   }
 
   @override
   Widget build(BuildContext context) {
@@ -469,8 +526,9 @@ class _AdminManageClansScreenState extends State<AdminManageClansScreen> {
                   itemBuilder: (context, index) {
                     final clan = _clans[index];
                     final clanName = clan.name; // Assuming name is not null
-
+                    
                     // Check specific permissions for the current clan in the list
+                    final bool canTransferLeadership = _canTransferLeadership();
                     final bool canEditThisClan = _canEditClan(clan);
                     final bool canDeleteAnyClan = _canDeleteClan(); // Delete is global for ADM_MASTER
 
@@ -479,6 +537,14 @@ class _AdminManageClansScreenState extends State<AdminManageClansScreen> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                           if (canTransferLeadership) // Conditionally show transfer leadership button
+                             IconButton(
+                                icon: const Icon(Icons.transfer_within_a_station),
+                                onPressed: () {
+                                  _showTransferLeadershipDialog(clan);
+                                },
+                                tooltip: 'Transferir Liderança',
+                             ),
                            if (canEditThisClan) // Conditionally show edit button
                              IconButton(
                                 icon: const Icon(Icons.edit),
@@ -495,8 +561,8 @@ class _AdminManageClansScreenState extends State<AdminManageClansScreen> {
                                 },
                                 tooltip: 'Excluir Clã',
                              ),
-                            // If neither action is allowed, you might hide the Row or show a different indicator
-                            if (!canEditThisClan && !canDeleteAnyClan)
+                            // If no actions are allowed for this clan, hide the row
+                            if (!canEditThisClan && !canDeleteAnyClan && !canTransferLeadership)
                               const SizedBox.shrink(), // Hide the row if no actions
                         ],
                       ),
