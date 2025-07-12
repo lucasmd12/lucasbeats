@@ -196,7 +196,7 @@ class UserDashboardWidget extends StatelessWidget {
 
   Color _getRoleColor(Role role) {
     switch (role) {
-      case Role.federationAdmin:
+      case Role.admMaster:
         return Colors.red;
       case Role.clanLeader:
         return Colors.orange;
@@ -206,8 +206,6 @@ class UserDashboardWidget extends StatelessWidget {
         return Colors.blue;
       case Role.guest:
         return Colors.grey;
-      case Role.adm: // Adicionado ADM
-        return Colors.red; // Cor para ADM
       case Role.user: // Adicionado User
         return Colors.blue; // Cor para User
       default:
@@ -218,15 +216,13 @@ class UserDashboardWidget extends StatelessWidget {
   String _getRoleDisplayName(Role role) {
     switch (role) {
       case Role.federationAdmin:
-        return 'ADMINISTRADOR FEDERAÇÃO';
+        return 'ADMINISTRADOR FEDERACAO';
       case Role.clanLeader:
-        return 'LÍDER CLÃ';
+        return 'LIDER CLAN';
       case Role.clanSubLeader:
-        return 'SUB-LÍDER CLÃ';
+        return 'SUB-LIDER CLAN';
       case Role.clanMember:
-        return 'MEMBRO CLÃ';
-      case Role.guest:
-        return 'CONVIDADO';
+        return 'MEMBRO CLAN';
       case Role.adm:
         return 'ADMINISTRADOR';
       case Role.user:

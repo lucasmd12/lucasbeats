@@ -45,13 +45,11 @@ class QuickActionsWidget extends StatelessWidget {
   Widget _buildActionsForRole(BuildContext context) {
     // Verificar se o usuário é admin (role 'admin' do backend)
     switch (userRole) {
-      case Role.adm:
-      case Role.federationAdmin:
+ case Role.admMaster:
         return _buildAdminActions(context);
-      case Role.adminReivindicado:
-        return _buildLimitedAdminActions(context);
-      case Role.descolado:
-        return _buildDescoladoActions(context);
+ case Role.user: // Assuming 'adminReivindicado' and 'descolado' fall under a modified 'user' or new role
+ // If a specific limited admin or descolado role is needed,
+ // it should be added to the Role enum and handled here.
       case Role.clanLeader:
         return _buildLeaderActions(context);
       case Role.clanSubLeader:
@@ -59,8 +57,6 @@ class QuickActionsWidget extends StatelessWidget {
       case Role.clanMember:
         return _buildMemberActions(context);
       case Role.guest:
-        return _buildGuestActions(context);
-      case Role.user:
         return _buildUserActions(context);
       default:
         return _buildGuestActions(context); // Fallback para convidados ou papéis não mapeados
@@ -529,61 +525,6 @@ class QuickActionsWidget extends StatelessWidget {
   // Navigation Placeholder
   void _showCallDialog(BuildContext context) {
     Navigator.pushNamed(context, '/call-contacts'); // Assuming this navigates to a screen
-  }
-
- Widget _buildLimitedAdminActions(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _buildActionButton(
-          context,
-          'Painel ADM',
-          Icons.admin_panel_settings,
-          Colors.red,
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ClanManagementScreen(clanId: clanId!)),
-          ),
-        ),
-        _buildActionButton(
-          context,
-          'Promover Usuário',
-          Icons.person_add,
-          Colors.green,
-          () => _showPromoteUserDialog(context),
-        ),
-        _buildActionButton(
-          context,
-          'Fazer Chamada',
-          Icons.call,
-          Colors.green,
-          () => _showCallDialog(context),
-        ),
-      ],
-    );
-  }
-  Widget _buildDescoladoActions(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _buildActionButton(
-          context,
-          'Ver Missões',
-          Icons.assignment,
-          Colors.green,
-          () => _showMissionsDialog(context),
-        ),
-        _buildActionButton(
-          context,
-          'Fazer Chamada',
-          Icons.call,
-          Colors.green,
-          () => _showCallDialog(context),
-        ),
-      ],
-    );
   }
 
   Widget _buildUserActions(BuildContext context) {
