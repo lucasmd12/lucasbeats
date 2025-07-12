@@ -191,7 +191,7 @@ class AuthService extends ChangeNotifier {
           userRoleDisplayName = currentUser.role.displayName;
 
  scope.setUser(
-            const SentryUser(
+            SentryUser(
               id: currentUser.id,
               username: currentUser.username,
               data: {

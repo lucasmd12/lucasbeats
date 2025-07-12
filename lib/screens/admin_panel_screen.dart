@@ -1383,11 +1383,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                               onSelected: (action) => _handleClanMemberAction(clan, member, action, setState), // Passar setState
                               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                                 // Promover a SubLíder (se não for líder)
-                                if (member.clanRole != Role.clanLeader) // Only show promote if not already leader
+                                if (member.clanRole != Role.clanLeader && member.clanRole != Role.clanSubLeader) // Only show promote if not already leader or subleader
                                   const PopupMenuItem<String>(value: "promote", child: Text("Promover a SubLíder")),
                                 // Rebaixar a Membro (sempre incluído para líderes ou sublideres)
 
-                                if (member.clanRole != Role.clanMember)
+                                if (member.clanRole != Role.clanMember && member.clanRole != Role.clanLeader) // Rebaixar se não for membro ou líder (lider é tratado na transferencia)
                                   const PopupMenuItem<String>(
                                     value: "demote",
                                     child: Text("Rebaixar a Membro"),
@@ -1809,7 +1809,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                                   const PopupMenuItem<String>(value: "promote_leader", child: Text("Promover a Líder")),
                                 // Rebaixar a Membro (sempre incluído para líderes ou sublideres)
                                 if (member.federationRole == Role.leader) // Only show demote if currently a leader
-                                  const PopupMenuItem<String>(value: "demote", child: Text("Rebaixar a Membro")),
+                                  const PopupMenuItem<String>(value: "demote", child: Text("Rebaixar a Membro")), // Added const
                                 // Remover da Federação (sempre incluído)
                                 const PopupMenuItem<String>(
                                   value: "remove", child: Text("Remover da Federação")),
