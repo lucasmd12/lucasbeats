@@ -83,7 +83,7 @@ class _UserPromotionDialogState extends State<UserPromotionDialog> {
               ),
               DropdownMenuItem(
                 value: Role.admMaster,
-                child: const Row(
+                child: Row(
                   children: [
                     Container(
                       width: 12,
@@ -93,7 +93,7 @@ class _UserPromotionDialogState extends State<UserPromotionDialog> {
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 8), // Adicionado 'const' aqui
                     const Text('Administrador'),
                   ],
                 ),
