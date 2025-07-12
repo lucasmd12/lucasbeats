@@ -188,14 +188,14 @@ class AuthService extends ChangeNotifier {
             id: _currentUser!.id,
             username: _currentUser!.username,
             data: {
-              'role': _currentUser!.role.displayName, // Usar displayName para Sentry
+              'role': _currentUser!.role.displayName ?? _currentUser!.role.toString(), // Usar displayName para Sentry com fallback
               'clan': _currentUser!.clanName, // Usar clanName para Sentry
               'federation': _currentUser!.federationName, // Usar federationName para Sentry
             },
           ),
         );
         // CORREÇÃO AQUI: Adicionado .toString() para garantir que o valor seja String
-        scope.setTag('user_role', _currentUser!.role.displayName); // Usar displayName para Sentry
+        scope.setTag('user_role', _currentUser!.role.displayName ?? _currentUser!.role.toString()); // Usar displayName para Sentry com fallback
         if (_currentUser!.clanName != null) {
           scope.setTag('user_clan', _currentUser!.clanName!); // Usar clanName para Sentry
         }

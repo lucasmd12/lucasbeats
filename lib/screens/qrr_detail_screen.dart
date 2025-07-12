@@ -179,7 +179,6 @@ class _QRRDetailScreenState extends State<QRRDetailScreen> {
       currentUser.role == Role.admMaster ||
       currentUser.role == Role.leader ||
       currentUser.role == Role.subLeader ||
-      currentUser.role == Role.federationAdmin ||
       currentUser.role == Role.clanLeader ||
       currentUser.role == Role.clanSubLeader
     );

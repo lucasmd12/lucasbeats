@@ -214,17 +214,10 @@ class UserDashboardWidget extends StatelessWidget {
   }
 
   String _getRoleDisplayName(Role role) {
+    // Removed Role.federationAdmin and Role.adm as they are now covered by Role.admMaster
     switch (role) {
-      case Role.federationAdmin:
-        return 'ADMINISTRADOR FEDERACAO';
-      case Role.clanLeader:
-        return 'LIDER CLAN';
-      case Role.clanSubLeader:
-        return 'SUB-LIDER CLAN';
-      case Role.clanMember:
-        return 'MEMBRO CLAN';
-      case Role.adm:
-        return 'ADMINISTRADOR';
+      case Role.admMaster:
+        return 'ADM MASTER'; // Or 'ADMINISTRADOR' if preferred
       case Role.user:
         return 'USUÁRIO';
       default:
