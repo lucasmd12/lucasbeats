@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart'; // Para ChangeNotifier
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:lucasbeatsfederacao/models/user_model.dart'; // Importa o modelo User
+import 'package:lucasbeatsfederacao/models/role_model.dart'; // Importa a extensão RoleExtension
 import 'package:lucasbeatsfederacao/services/api_service.dart';
 import 'package:lucasbeatsfederacao/utils/logger.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -182,27 +183,33 @@ class AuthService extends ChangeNotifier {
 
   void _setSentryUser() {
     if (_currentUser != null) {
-      Sentry.configureScope((scope) {
-        scope.setUser(
-          SentryUser(
-            id: _currentUser!.id,
-            username: _currentUser!.username,
-            data: {
-              'role': _currentUser!.role.displayName ?? _currentUser!.role.toString(), // Usar displayName para Sentry com fallback
-              'clan': _currentUser!.clanName,
-              'federation': _currentUser!.federationName,
-            },
-          ),
-        );
-        // Usar uma função auxiliar para obter o nome de exibição do papel
-        scope.setTag('user_role', _currentUser!.role.displayName ?? _currentUser!.role.toString()); // Usar displayName para Sentry com fallback
-        if (_currentUser!.clanName != null) {
-          scope.setTag('user_clan', _currentUser!.clanName!); // Usar clanName para Sentry
+      final currentUser = _currentUser!; // Use a local non-nullable variable
+      Sentry.configureScope(
+        (scope) {
+          String? userRoleDisplayName;
+          // Access displayName using the RoleExtension.
+          userRoleDisplayName = currentUser.role.displayName;
+
+ scope.setUser(
+            const SentryUser(
+              id: currentUser.id,
+              username: currentUser.username,
+              data: {
+                'role': userRoleDisplayName,
+                'clan': currentUser.clanName,
+                'federation': currentUser.federationName,
+              },
+            ),
+          );
+          scope.setTag('user_role', userRoleDisplayName ?? 'unknown');
+          if (currentUser.clanName != null) {
+            scope.setTag('user_clan', currentUser.clanName!);
+          }
+          if (currentUser.federationName != null) {
+            scope.setTag('user_federation', currentUser.federationName!);
+          }
         }
-        if (_currentUser!.federationName != null) {
-          scope.setTag('user_federation', _currentUser!.federationName!); // Usar federationName para Sentry
-        }
-      });
+      );
     } else {
       _clearSentryUser();
     }

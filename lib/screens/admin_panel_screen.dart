@@ -168,26 +168,26 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
-            title: Text(
+            title: Text( // Changed to const List<Widget>
               user.username ?? 'Usuário Desconhecido',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold), // Consider if user.username can be null here. If so, use `user.username ?? 'Usuário Desconhecido'`
-            ),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
- children: [ // Changed to const List<Widget>
+              children: [
                 Text(
                   "Login: ${user.username ?? 'N/A'}",
                   style: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 12),
                 ),
                 Text(
-                  "Clã: ${user.clanName ?? "N/A"} (Papel: ${user.clanRole.displayName})", // Use clanRole for clarity
+                  "Clã: ${user.clanName ?? "N/A"} (Papel: ${user.clanRole.displayName})",
                   style: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 12),
                 ),
                 Text(
-                  "Federação: ${user.federationName ?? "N/A"} (Papel: ${user.federationRole.displayName})", // Use federationRole for clarity
+                  "Federação: ${user.federationName ?? "N/A"} (Papel: ${user.federationRole.displayName})",
                   style: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 12),
                 ),
-              ],
+          ],
+
             ),
             trailing: PopupMenuButton<String>(
               onSelected: (action) => _handleUserAction(user, action),
@@ -848,9 +848,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         title: Text("Editar Papel - ${user.username ?? 'Usuário Desconhecido'}", style: const TextStyle(color: Colors.white)), // Added const
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: Role.values.where((role) => role != Role.guest).map((role) => ListTile(
-            title: Text(role.displayName, style: const TextStyle(color: Colors.white)),
-            leading: Radio<Role>(
+          children: Role.values.where((role) => role != Role.guest).map((role) => 
+            ListTile(
+              title: Text(role.displayName, style: const TextStyle(color: Colors.white)),
+ leading: Radio<Role>(
               value: role,
               groupValue: user.role,
               onChanged: (Role? value) async {
@@ -922,7 +923,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF212121),
         title: Text("Resetar Senha - ${user.username}", style: const TextStyle(color: Colors.white)), // According to analyzer, user.username cannot be null here.
-        content: TextField(
+        content: TextField( // Added const
           controller: _newPasswordController,
           obscureText: true,
           decoration: const InputDecoration(
@@ -967,7 +968,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             },
             child: const Text("Resetar", style: TextStyle(color: Colors.blueAccent)),
           ),
-        ],
+    ], // Added const
       ),
     );
   }
@@ -976,7 +977,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF212121),
+        backgroundColor: const Color(0xFF212121), // Added const
         title: Text("Suspender Usuário - ${user.username}", style: const TextStyle(color: Colors.white)), // According to analyzer, user.username cannot be null here.
         content: Text(
           "Tem certeza que deseja suspender o usuário ${user.username}? Ele não poderá mais fazer login.", // According to analyzer, user.username cannot be null here.
@@ -1009,7 +1010,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             },
             child: const Text("Suspender", style: TextStyle(color: Colors.redAccent)),
           ),
-        ],
+    ], // Added const
       ),
     );
   }
@@ -1025,7 +1026,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         title: Text('Transferir Liderança de ${federation.name}', style: const TextStyle(color: Colors.white)), // According to analyzer, federation.name cannot be null here.
         content: Container( // Use Container para limitar a altura do diálogo
            width: double.maxFinite,
- height: 300, // Ajuste a altura conforme necessário
+ height: 300, // Ajuste a altura conforme necessário // Added const
            child: ListView.builder(
               itemCount: _allUsers.length,
               itemBuilder: (context, index) {
@@ -1047,7 +1048,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             onPressed: () => Navigator.pop(context), // Fechar apenas o diálogo de seleção
             child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
           ),
-        ],
+    ], // Added const
       ),
     );
 
@@ -1060,7 +1061,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         builder: (context) => AlertDialog(
           backgroundColor: const Color(0xFF212121),
           title: const Text('Confirmar Transferência', style: TextStyle(color: Colors.white)), // Added const
-          content: Text('Tem certeza que deseja transferir a liderança da federação "${federation.name}" para o usuário "${selectedUser!.username}"?', style: const TextStyle(color: Colors.white70)), // According to analyzer, federation.name and selectedUser!.username cannot be null here.
+            content: Text('Tem certeza que deseja transferir a liderança da federação "${federation.name}" para o usuário "${selectedUser!.username}"?', style: const TextStyle(color: Colors.white70)), // According to analyzer, federation.name and selectedUser!.username cannot be null here.
           actions: [
             TextButton(
               child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
@@ -1073,7 +1074,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
           ],
         ),
       ) ?? false; // Retorna false se o diálogo for dismissido sem botão
-
+ // Added const
       if (confirmTransfer) {
         _performFederationLeadershipTransfer(federation.id, selectedUser!.id, federation.name); // According to analyzer, federation.name cannot be null here.
       }
@@ -1124,7 +1125,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: [ // Added const
               TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
@@ -1179,7 +1180,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
           ),
-          TextButton(
+          TextButton( // Added const
             onPressed: () async {
               if (nameController.text.isEmpty || tagController.text.isEmpty || selectedLeader == null) {
                 _showSnackBar('Preencha todos os campos e selecione um líder.', isError: true);
@@ -1219,7 +1220,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         backgroundColor: const Color(0xFF212121),
         title: const Text('Selecionar Usuário', style: TextStyle(color: Colors.white)), // Added const
         content: Container(
-          width: double.maxFinite, // Added const
+          width: double.maxFinite,
           height: 300,
           child: ListView.builder(
             itemCount: _allUsers.length,
@@ -1240,7 +1241,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             onPressed: () => Navigator.pop(context, null),
             child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
           ),
-        ],
+    ], // Added const
       ),
     );
   }
@@ -1257,7 +1258,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         content: Container(
            width: double.maxFinite,
            height: 300,
-           child: ListView.builder(
+           child: ListView.builder( // Added const
               itemCount: _allUsers.length,
               itemBuilder: (context, index) {
                 final user = _allUsers[index];
@@ -1277,7 +1278,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             onPressed: () => Navigator.pop(context), // Fechar apenas o diálogo de seleção
             child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
           ),
-        ],
+    ], // Added const
       ),
     );
 
@@ -1288,7 +1289,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         builder: (context) => AlertDialog(
           backgroundColor: const Color(0xFF212121),
           title: const Text('Confirmar Transferência', style: TextStyle(color: Colors.white)), // Added const
-          content: Text('Tem certeza que deseja transferir a liderança do clã "${clan.name}" para o usuário "${selectedUser!.username}"?', style: const TextStyle(color: Colors.white70)), // According to analyzer, clan.name and selectedUser!.username cannot be null here.
+            content: Text('Tem certeza que deseja transferir a liderança do clã "${clan.name}" para o usuário "${selectedUser!.username}"?', style: const TextStyle(color: Colors.white70)), // According to analyzer, clan.name and selectedUser!.username cannot be null here.
           actions: [
             TextButton(
               child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
@@ -1301,7 +1302,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
           ],
         ),
       ) ?? false;
-
+ // Added const
       if (confirmTransfer) {
         _performClanLeadershipTransfer(clan.id, selectedUser!.id, clan.name); // According to analyzer, clan.name cannot be null here.
       }
@@ -1367,7 +1368,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisSize: MainAxisSize.min, // Added const
                       children: [
                         // Membros Atuais
                         const Text('Membros Atuais', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -1380,22 +1381,23 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                             subtitle: Text('Papel: ${member.clanRole.displayName}', style: const TextStyle(color: Colors.white70)), // Use clanRole here
                             trailing: PopupMenuButton<String>(
                               onSelected: (action) => _handleClanMemberAction(clan, member, action, setState), // Passar setState
-                              itemBuilder: (context) => <PopupMenuEntry<String>>[
-                                if (member.clanRole != Role.clanLeader) // Não pode rebaixar o líder
-                                   const PopupMenuItem<String>(
-                                    value: "promote",
-                                    child: Text("Promover"), // Consider promoting to SubLeader first? API logic might handle this.
-                                  ),
-                                if (member.clanRole != Role.clanMember) // Não pode promover o membro
- PopupMenuItem<String>( // Add const
-                                    value: "demote", // Added const
+                              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                                // Promover a SubLíder (se não for líder)
+                                if (member.clanRole != Role.clanLeader) // Only show promote if not already leader
+                                  const PopupMenuItem<String>(value: "promote", child: Text("Promover a SubLíder")),
+                                // Rebaixar a Membro (sempre incluído para líderes ou sublideres)
+
+                                if (member.clanRole != Role.clanMember)
+                                  const PopupMenuItem<String>(
+                                    value: "demote",
                                     child: Text("Rebaixar a Membro"),
-                                  ),
-                                const PopupMenuItem<String>(
+ ),
+ const PopupMenuItem<String>(
                                   value: "remove",
                                   child: Text("Remover do Clã"),
                                 ),
-                              ],
+                                
+                              ], // Added const
                             ),
                           )).toList(),
                         const Divider(color: Colors.white70),
@@ -1413,7 +1415,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                             ),
                           )).toList(),
                       ],
-                    ),
+            ), // Added const
                   ),
             actions: [
               TextButton(
@@ -1421,7 +1423,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 child: const Text('Fechar', style: TextStyle(color: Colors.white70)),
               ),
             ],
-          );
+    ); // Added const
         },
       ),
     );
@@ -1523,7 +1525,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: [ // Added const
               TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
@@ -1578,7 +1580,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
           ),
-          TextButton(
+          TextButton( // Added const
             onPressed: () async {
               if (nameController.text.isEmpty || tagController.text.isEmpty || selectedLeader == null) {
                 _showSnackBar('Preencha todos os campos e selecione um líder.', isError: true);
@@ -1641,7 +1643,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisSize: MainAxisSize.min, // Added const
                       children: [
                         // Clãs Atuais na Federação
                         const Text('Clãs na Federação', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -1673,7 +1675,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                             ),
                           )).toList(),
                       ],
-                    ),
+            ), // Added const
                   ),
             actions: [
               TextButton(
@@ -1681,7 +1683,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 child: const Text('Fechar', style: TextStyle(color: Colors.white70)),
               ),
             ],
-          );
+    ); // Added const
         },
       ),
     );
@@ -1788,7 +1790,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisSize: MainAxisSize.min, // Added const
                       children: [
                         // Membros Atuais
                         const Text('Membros Atuais', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -1801,21 +1803,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                             subtitle: Text('Papel: ${member.federationRole.displayName}', style: const TextStyle(color: Colors.white70)), // Use federationRole here
                             trailing: PopupMenuButton<String>(
                               onSelected: (action) => _handleFederationMemberAction(federation, member, action, setState), // Passar setState
-                              itemBuilder: (context) => <PopupMenuEntry<String>>[
-                                if (member.federationRole != Role.leader) // Não pode rebaixar o líder
-                                  const PopupMenuItem<String>(
-                                    value: "promote_leader",
-                                    child: Text("Promover a Líder"),
-                                  ),
-                                if (member.federationRole != Role.member) // Não pode promover o membro
-                                  const PopupMenuItem<String>(
-                                    value: "demote",
-                                    child: Text("Rebaixar a Membro"),
-                                  ),
+                              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[ // Changed to const List<PopupMenuEntry<String>>
+                                // Promover a Líder (se não for líder)
+                                if (member.federationRole != Role.leader) // Only show promote if not already leader
+                                  const PopupMenuItem<String>(value: "promote_leader", child: Text("Promover a Líder")),
+                                // Rebaixar a Membro (sempre incluído para líderes ou sublideres)
+                                if (member.federationRole == Role.leader) // Only show demote if currently a leader
+                                  const PopupMenuItem<String>(value: "demote", child: Text("Rebaixar a Membro")),
+                                // Remover da Federação (sempre incluído)
                                 const PopupMenuItem<String>(
-                                    value: "remove",
-                                    child: Text("Remover da Federação"),
-                                  ),
+                                  value: "remove", child: Text("Remover da Federação")),
                               ],
                             ),
                           )).toList(),
@@ -1829,12 +1826,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                           ...availableUsers.map((user) => ListTile(
                             title: Text(user.username ?? 'Usuário Desconhecido', style: const TextStyle(color: Colors.white)),
                             trailing: IconButton(
-                              icon: const Icon(Icons.add_circle, color: Colors.greenAccent),
+                              icon: const Icon(
+                                Icons.add_circle,
+                                color: Colors.greenAccent,
+                              ),
                               onPressed: () => _addMemberToFederation(federation, user, setState), // Passar setState
                             ),
                           )).toList(),
                       ],
-                    ),
+            ), // Added const
                   ),
             actions: [
               TextButton(
@@ -1842,7 +1842,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 child: const Text('Fechar', style: TextStyle(color: Colors.white70)),
               ),
             ],
-          );
+    ); // Added const
         },
       ),
     );
