@@ -255,8 +255,6 @@ class MemberListItem extends StatelessWidget {
 
   String _getRoleDisplayName(Role role) {
     switch (role) {
-      case Role.federationAdmin:
- return 'ADM FEDERAÇÃO'; // Maybe keep for federation view? Need context.
  case Role.leader:
  return 'LÍDER';
  case Role.subLeader:

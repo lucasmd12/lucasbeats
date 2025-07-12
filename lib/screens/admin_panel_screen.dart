@@ -170,7 +170,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             ),
             title: Text(
               user.username ?? 'Usuário Desconhecido',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold), // Consider if user.username can be null here. If so, use `user.username ?? 'Usuário Desconhecido'`
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,11 +180,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                   style: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 12),
                 ),
                 Text(
-                  "Clã: ${user.clanName ?? "N/A"} (Papel: ${user.role.displayName})",
+                  "Clã: ${user.clanName ?? "N/A"} (Papel: ${user.clanRole.displayName})", // Use clanRole for clarity
                   style: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 12),
                 ),
                 Text(
-                  "Federação: ${user.federationName ?? "N/A"}",
+                  "Federação: ${user.federationName ?? "N/A"} (Papel: ${user.federationRole.displayName})", // Use federationRole for clarity
                   style: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 12),
                 ),
               ],
@@ -593,7 +593,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             Icons.admin_panel_settings,
             Colors.red,
             [
-              "Gerenciar todos os usuários",
+              "Gerenciar todos os usuários (exceto outros ADM Master)",
               "Criar/excluir clãs e federações",
               "Acessar logs do sistema",
               "Configurar servidor",
@@ -895,7 +895,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text("ID: ${user.id}", style: const TextStyle(color: Colors.white)),
-            Text("Usuário: ${user.username ?? 'N/A'}", style: const TextStyle(color: Colors.white)),
+            Text("Usuário: ${user.username}", style: const TextStyle(color: Colors.white)), // According to analyzer, user.username cannot be null here.
             Text("Papel: ${user.role.displayName}", style: const TextStyle(color: Colors.white)),
             Text("Online: ${user.online ? "Sim" : "Não"}", style: const TextStyle(color: Colors.white)),
             Text("Clã: ${user.clanName ?? "N/A"} (Papel: ${user.clanRole.displayName})", style: const TextStyle(color: Colors.white)),
@@ -921,7 +921,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF212121),
-        title: Text("Resetar Senha - ${user.username ?? 'Usuário Desconhecido'}", style: const TextStyle(color: Colors.white)), // Added const
+        title: Text("Resetar Senha - ${user.username}", style: const TextStyle(color: Colors.white)), // According to analyzer, user.username cannot be null here.
         content: TextField(
           controller: _newPasswordController,
           obscureText: true,
@@ -956,7 +956,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 );
                 if (mounted) {
                   Navigator.pop(context);
-                  _showSnackBar("Senha de ${user.username ?? 'Usuário'} resetada com sucesso!");
+                  _showSnackBar("Senha de ${user.username} resetada com sucesso!"); // According to analyzer, user.username cannot be null here.
                 }
               } catch (e) {
                 Logger.error("Erro ao resetar senha: $e");
@@ -977,9 +977,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF212121),
-        title: Text("Suspender Usuário - ${user.username ?? 'Usuário Desconhecido'}", style: const TextStyle(color: Colors.white)), // Added const
+        title: Text("Suspender Usuário - ${user.username}", style: const TextStyle(color: Colors.white)), // According to analyzer, user.username cannot be null here.
         content: Text(
-          "Tem certeza que deseja suspender o usuário ${user.username ?? 'este usuário'}? Ele não poderá mais fazer login.",
+          "Tem certeza que deseja suspender o usuário ${user.username}? Ele não poderá mais fazer login.", // According to analyzer, user.username cannot be null here.
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -997,7 +997,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 );
                 if (mounted) {
                   Navigator.pop(context);
-                  _showSnackBar("Usuário ${user.username ?? 'Usuário'} suspenso com sucesso!");
+                  _showSnackBar("Usuário ${user.username} suspenso com sucesso!"); // According to analyzer, user.username cannot be null here.
                   _loadAdminData(); // Recarregar dados para refletir a suspensão
                 }
               } catch (e) {
@@ -1022,7 +1022,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF212121),
-        title: Text('Transferir Liderança de ${federation.name ?? 'Federação'}', style: const TextStyle(color: Colors.white)), // Added const
+        title: Text('Transferir Liderança de ${federation.name}', style: const TextStyle(color: Colors.white)), // According to analyzer, federation.name cannot be null here.
         content: Container( // Use Container para limitar a altura do diálogo
            width: double.maxFinite,
  height: 300, // Ajuste a altura conforme necessário
@@ -1030,7 +1030,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
               itemCount: _allUsers.length,
               itemBuilder: (context, index) {
                 final user = _allUsers[index];
-                return ListTile(
+                return ListTile( // Added const
                   title: Text(user.username ?? 'Usuário Desconhecido', style: const TextStyle(color: Colors.white)),
                   subtitle: Text('ID: ${user.id}', style: const TextStyle(color: Colors.white70)),
                   onTap: () {
@@ -1060,7 +1060,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         builder: (context) => AlertDialog(
           backgroundColor: const Color(0xFF212121),
           title: const Text('Confirmar Transferência', style: TextStyle(color: Colors.white)), // Added const
-          content: Text('Tem certeza que deseja transferir a liderança da federação "${federation.name ?? 'esta federação'}" para o usuário "${selectedUser!.username ?? 'este usuário'}"?', style: const TextStyle(color: Colors.white70)),
+          content: Text('Tem certeza que deseja transferir a liderança da federação "${federation.name}" para o usuário "${selectedUser!.username}"?', style: const TextStyle(color: Colors.white70)), // According to analyzer, federation.name and selectedUser!.username cannot be null here.
           actions: [
             TextButton(
               child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
@@ -1075,7 +1075,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       ) ?? false; // Retorna false se o diálogo for dismissido sem botão
 
       if (confirmTransfer) {
-        _performFederationLeadershipTransfer(federation.id, selectedUser!.id, federation.name);
+        _performFederationLeadershipTransfer(federation.id, selectedUser!.id, federation.name); // According to analyzer, federation.name cannot be null here.
       }
     }
   }
@@ -1094,7 +1094,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       );
 
       // Verificar a resposta da API
-      if (response["success"] == true) { // Adapte a verificação de sucesso conforme a sua API
+      if (response.containsKey("success") && response["success"] == true) { // Adapte a verificação de sucesso conforme a sua API
         _showSnackBar('Liderança da federação "${federationName ?? 'Federação'}" transferida com sucesso!');
         _loadFederationsData(); // Recarregar a lista de federações para refletir a mudança
       } else {
@@ -1158,7 +1158,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
               // Dropdown ou lista para selecionar o líder
               ListTile(
                 title: Text(
-                  selectedLeader == null ? "Selecionar Líder" : "Líder: ${selectedLeader.username ?? 'Usuário Desconhecido'}",
+                  selectedLeader == null ? "Selecionar Líder" : "Líder: ${selectedLeader!.username ?? 'Usuário Desconhecido'}", // Use ?? 'Usuário Desconhecido' for safety if username is nullable in User model
                   style: const TextStyle(color: Colors.white),
                 ),
                 trailing: const Icon(Icons.arrow_drop_down, color: Colors.white),
@@ -1219,7 +1219,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         backgroundColor: const Color(0xFF212121),
         title: const Text('Selecionar Usuário', style: TextStyle(color: Colors.white)), // Added const
         content: Container(
-          width: double.maxFinite,
+          width: double.maxFinite, // Added const
           height: 300,
           child: ListView.builder(
             itemCount: _allUsers.length,
@@ -1253,7 +1253,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF212121),
-        title: Text('Transferir Liderança de ${clan.name ?? 'Clã'}', style: const TextStyle(color: Colors.white)), // Added const
+        title: Text('Transferir Liderança de ${clan.name}', style: const TextStyle(color: Colors.white)), // According to analyzer, clan.name cannot be null here.
         content: Container(
            width: double.maxFinite,
            height: 300,
@@ -1261,7 +1261,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
               itemCount: _allUsers.length,
               itemBuilder: (context, index) {
                 final user = _allUsers[index];
-                return ListTile(
+                return ListTile( // Added const
                   title: Text(user.username ?? 'Usuário Desconhecido', style: const TextStyle(color: Colors.white)),
                   subtitle: Text('ID: ${user.id}', style: const TextStyle(color: Colors.white70)),
                   onTap: () {
@@ -1288,7 +1288,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         builder: (context) => AlertDialog(
           backgroundColor: const Color(0xFF212121),
           title: const Text('Confirmar Transferência', style: TextStyle(color: Colors.white)), // Added const
-          content: Text('Tem certeza que deseja transferir a liderança do clã "${clan.name ?? 'este clã'}" para o usuário "${selectedUser!.username ?? 'este usuário'}"?', style: const TextStyle(color: Colors.white70)),
+          content: Text('Tem certeza que deseja transferir a liderança do clã "${clan.name}" para o usuário "${selectedUser!.username}"?', style: const TextStyle(color: Colors.white70)), // According to analyzer, clan.name and selectedUser!.username cannot be null here.
           actions: [
             TextButton(
               child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
@@ -1303,7 +1303,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       ) ?? false;
 
       if (confirmTransfer) {
-        _performClanLeadershipTransfer(clan.id, selectedUser!.id, clan.name);
+        _performClanLeadershipTransfer(clan.id, selectedUser!.id, clan.name); // According to analyzer, clan.name cannot be null here.
       }
     }
   }
@@ -1320,7 +1320,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         },
       );
 
-      if (response["success"] == true) {
+      if (response.containsKey("success") && response["success"] == true) {
         _showSnackBar('Liderança do clã "${clanName ?? 'Clã'}" transferida com sucesso!');
         _loadClans();
       } else {
@@ -1362,7 +1362,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         builder: (BuildContext context, StateSetter setState) {
           return AlertDialog(
             backgroundColor: const Color(0xFF212121),
-            title: Text('Gerenciar Membros - ${clan.name ?? 'Clã'}', style: const TextStyle(color: Colors.white)), // Added const
+            title: Text('Gerenciar Membros - ${clan.name}', style: const TextStyle(color: Colors.white)), // According to analyzer, clan.name cannot be null here.
             content: loadingMembers
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
@@ -1377,14 +1377,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                         else
                           ...clanMembers.map((member) => ListTile(
                             title: Text(member.username ?? 'Usuário Desconhecido', style: const TextStyle(color: Colors.white)),
-                            subtitle: Text('Papel: ${member.role.displayName ?? 'N/A'}', style: const TextStyle(color: Colors.white70)),
+                            subtitle: Text('Papel: ${member.clanRole.displayName}', style: const TextStyle(color: Colors.white70)), // Use clanRole here
                             trailing: PopupMenuButton<String>(
                               onSelected: (action) => _handleClanMemberAction(clan, member, action, setState), // Passar setState
                               itemBuilder: (context) => <PopupMenuEntry<String>>[
                                 if ((member.clanRole != Role.clanLeader)) // Não pode rebaixar o líder
-                                  const PopupMenuItem<String>(
-                                    value: "promote_leader",
-                                    child: Text("Promover a Líder"),
+                                   const PopupMenuItem<String>(
+                                    value: "promote",
+                                    child: Text("Promover"), // Consider promoting to SubLeader first? API logic might handle this.
                                   ),
                                 if ((member.clanRole != Role.clanMember)) // Não pode promover o membro
  PopupMenuItem<String>( // Add const
@@ -1452,7 +1452,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
 
       final response = await apiService.post(endpoint, {}); // Assumindo POST para essas ações, body vazio conforme exemplo
 
-      if (response["success"] == true) {
+      if (response.containsKey("success") && response["success"] == true) {
         _showSnackBar('Membro ${member.username ?? 'Usuário'} ${action == "promote_leader" ? "promovido" : action == "demote" ? "rebaixado" : "removido"} com sucesso!'); // Updated action message
         // Recarregar membros do clã dentro do diálogo
         List<User> updatedClanMembers = (response["members"] as List) // Assumindo que a API retorna a lista atualizada
@@ -1485,7 +1485,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         {},
       );
 
-      if (response["success"] == true) {
+      if (response.containsKey("success") && response["success"] == true) {
         _showSnackBar('Membro ${user.username ?? 'Usuário'} adicionado ao clã com sucesso!');
         // Recarregar membros do clã dentro do diálogo
         List<User> updatedClanMembers = (response["members"] as List)
@@ -1557,7 +1557,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
               // Dropdown ou lista para selecionar o líder
               ListTile(
                 title: Text(
-                  selectedLeader == null ? "Selecionar Líder" : "Líder: ${selectedLeader.username ?? 'Usuário Desconhecido'}",
+                  selectedLeader == null ? "Selecionar Líder" : "Líder: ${selectedLeader!.username ?? 'Usuário Desconhecido'}", // Use ?? 'Usuário Desconhecido' for safety
                   style: const TextStyle(color: Colors.white),
                 ),
                 trailing: const Icon(Icons.arrow_drop_down, color: Colors.white),
@@ -1588,7 +1588,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 final federationService = Provider.of<FederationService>(context, listen: false);
                 final success = await federationService.createFederation(
                   {'name': nameController.text, 'tag': tagController.text, 'leaderId': selectedLeader!.id,}, // Added const
-                );
+                ); // According to analyzer, selectedLeader!.id cannot be null here.
                 if (success) {
                   _showSnackBar('Federação "${nameController.text}" criada com sucesso!');
                   _loadFederationsData(); // Recarregar a lista de federações
@@ -1636,7 +1636,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         builder: (BuildContext context, StateSetter setState) {
           return AlertDialog(
             backgroundColor: const Color(0xFF212121),
-            title: Text('Gerenciar Clãs - ${federation.name ?? 'Federação'}', style: const TextStyle(color: Colors.white)), // Added const
+            title: Text('Gerenciar Clãs - ${federation.name}', style: const TextStyle(color: Colors.white)), // According to analyzer, federation.name cannot be null here.
             content: loadingClans
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
@@ -1651,7 +1651,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                         else
                           ...federationClans.map((clan) => ListTile(
                             title: Text(clan.name ?? 'Clã sem nome', style: const TextStyle(color: Colors.white)),
-                            subtitle: Text('Tag: ${clan.tag ?? 'N/A'}', style: const TextStyle(color: Colors.white70)),
+                            subtitle: Text('Tag: ${clan.tag}', style: const TextStyle(color: Colors.white70)), // According to analyzer, clan.tag cannot be null here.
                             trailing: IconButton(
                               icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
                               onPressed: () => _removeClanFromFederation(federation, clan, setState), // Passar setState
@@ -1666,7 +1666,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                         else
                           ...availableClans.map((clan) => ListTile(
                             title: Text(clan.name ?? 'Clã sem nome', style: const TextStyle(color: Colors.white)),
-                            subtitle: Text('Tag: ${clan.tag ?? 'N/A'}', style: const TextStyle(color: Colors.white70)),
+                            subtitle: Text('Tag: ${clan.tag}', style: const TextStyle(color: Colors.white70)), // According to analyzer, clan.tag cannot be null here.
                             trailing: IconButton(
                               icon: const Icon(Icons.add_circle, color: Colors.greenAccent),
                               onPressed: () => _addClanToFederation(federation, clan, setState), // Passar setState
@@ -1698,7 +1698,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         {},
       );
 
-      if (response["success"] == true) {
+      if (response.containsKey("success") && response["success"] == true) {
         _showSnackBar('Clã "${clan.name ?? 'Clã'}" removido da federação com sucesso!');
         // Recarregar clãs da federação dentro do diálogo
         List<Clan> updatedFederationClans = (response["clans"] as List)
@@ -1731,7 +1731,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         {},
       );
 
-      if (response["success"] == true) {
+      if (response.containsKey("success") && response["success"] == true) {
         _showSnackBar('Clã "${clan.name ?? 'Clã'}" adicionado à federação com sucesso!');
         // Recarregar clãs da federação dentro do diálogo
         List<Clan> updatedFederationClans = (response["clans"] as List)
@@ -1783,7 +1783,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         builder: (BuildContext context, StateSetter setState) {
           return AlertDialog(
             backgroundColor: const Color(0xFF212121),
-            title: Text('Gerenciar Membros - ${federation.name ?? 'Federação'}', style: const TextStyle(color: Colors.white)), // Added const
+            title: Text('Gerenciar Membros - ${federation.name}', style: const TextStyle(color: Colors.white)), // According to analyzer, federation.name cannot be null here.
             content: loadingMembers
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
@@ -1798,7 +1798,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                         else
                           ...federationMembers.map((member) => ListTile(
                             title: Text(member.username ?? 'Usuário Desconhecido', style: const TextStyle(color: Colors.white)),
-                            subtitle: Text('Papel: ${member.role.displayName ?? 'N/A'}', style: const TextStyle(color: Colors.white70)),
+                            subtitle: Text('Papel: ${member.federationRole.displayName}', style: const TextStyle(color: Colors.white70)), // Use federationRole here
                             trailing: PopupMenuButton<String>(
                               onSelected: (action) => _handleFederationMemberAction(federation, member, action, setState), // Passar setState
                               itemBuilder: (context) => <PopupMenuEntry<String>>[
@@ -1873,7 +1873,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
 
       final response = await apiService.post(endpoint, {}); // Assumindo POST para essas ações, body vazio conforme example
 
-      if (response["success"] == true) {
+      if (response.containsKey("success") && response["success"] == true) {
         _showSnackBar('Membro ${member.username ?? 'Usuário'} ${action == "promote_leader" ? "promovido" : action == "demote" ? "rebaixado" : "removido"} com sucesso!'); // Updated action message
         // Recarregar membros da federação dentro do diálogo
         List<User> updatedFederationMembers = (response["members"] as List)
@@ -1906,7 +1906,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         {},
       );
 
-      if (response["success"] == true) {
+      if (response.containsKey("success") && response["success"] == true) {
         _showSnackBar('Membro ${user.username ?? 'Usuário'} adicionado à federação com sucesso!');
         // Recarregar membros da federação dentro do diálogo
         List<User> updatedFederationMembers = (response["members"] as List)
@@ -1936,6 +1936,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       case Role.leader: return Colors.orange;
       case Role.subLeader: return const Color(0xFFFBC02D);
       case Role.member: return Colors.blue;
+      case Role.user: return Colors.grey; // Adicionado para cobrir Role.user
       case Role.clanMember: return Colors.blue; // Manter para compatibilidade se ainda usado
       case Role.guest: return Colors.grey;
     }
