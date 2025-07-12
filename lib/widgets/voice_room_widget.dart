@@ -174,7 +174,7 @@ class _VoiceRoomWidgetState extends State<VoiceRoomWidget> {
       case 'global':
         return true; // Qualquer usuário pode entrar
       case 'admin':
-        return user.role == Role.federationAdmin;
+        return user.role == Role.admMaster;
       default:
         return false;
     }

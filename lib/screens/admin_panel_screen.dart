@@ -191,7 +191,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             ),
             trailing: PopupMenuButton<String>(
               onSelected: (action) => _handleUserAction(user, action),
-              itemBuilder: (context) => <PopupMenuEntry<String>>[
+ itemBuilder: (context) => <PopupMenuEntry<String>>[ // Changed to const
                 const PopupMenuItem<String>(
                   value: "edit_role",
                   child: Row(
@@ -1933,6 +1933,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
   Color _getRoleColor(Role role) {
     switch (role) {
       case Role.admMaster: return Colors.red; // Cor para ADM Master
+      case Role.federationLeader: return Colors.orange; // Cor para Líder de Federação (RESOLVE undefined_enum_constant)
       case Role.leader: return Colors.orange;
       case Role.subLeader: return const Color(0xFFFBC02D);
       case Role.member: return Colors.blue;

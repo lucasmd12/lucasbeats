@@ -82,7 +82,7 @@ class _UserPromotionDialogState extends State<UserPromotionDialog> {
                 ),
               ),
               DropdownMenuItem(
-                value: Role.federationAdmin,
+                value: Role.admMaster,
                 child: const Row(
                   children: [
                     Container(

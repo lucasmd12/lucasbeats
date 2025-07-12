@@ -92,6 +92,26 @@ class _QRRListScreenState extends State<QRRListScreen> with TickerProviderStateM
     }
   }
 
+  Widget _buildQRRList(List<QRRModel> qrrs, String emptyMessage) {
+    if (qrrs.isEmpty) {
+      return Center(
+        child: Text(
+          emptyMessage,
+          style: const TextStyle(color: Colors.grey, fontSize: 16),
+        ),
+      );
+    } else {
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: qrrs.length,
+        itemBuilder: (context, index) {
+          final qrr = qrrs[index];
+          return _buildQRRCard(qrr);
+        },
+      );
+    }
+  }
+
   List<QRRModel> get _filteredQRRs {
     var filtered = _allQRRs;
 
