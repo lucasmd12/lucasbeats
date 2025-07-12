@@ -175,7 +175,7 @@ class _QRRDetailScreenState extends State<QRRDetailScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final currentUser = authProvider.currentUser;
     final isParticipant = currentUser != null && _qrr.participants.any((p) => p.id == currentUser.id);
-    final canManage = currentUser != null && currentUser.role != null && (
+    final canManage = currentUser != null && (
       currentUser.role == Role.admMaster ||
       currentUser.role == Role.leader ||
       currentUser.role == Role.subLeader ||

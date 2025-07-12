@@ -6,7 +6,6 @@ import 'package:lucasbeatsfederacao/services/clan_service.dart';
 import 'package:lucasbeatsfederacao/services/invite_service.dart';
 import 'package:lucasbeatsfederacao/services/user_service.dart';
 import 'package:lucasbeatsfederacao/models/member_model.dart';
-import 'package:lucasbeatsfederacao/models/role_model.dart';
 import 'package:lucasbeatsfederacao/utils/logger.dart';
 import 'package:lucasbeatsfederacao/services/socket_service.dart'; // Import SocketService
 import 'package:lucasbeatsfederacao/widgets/member_list_item.dart';

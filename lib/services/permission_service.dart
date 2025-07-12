@@ -37,7 +37,7 @@ class PermissionService {
         return user.role != Role.guest; // Apenas usuários logados
       case 'admin':
         // Apenas ADM global pode entrar
-        return user.role == Role.adm;
+        return user.role == Role.admMaster;
       default:
         return false;
     }
@@ -88,11 +88,7 @@ class PermissionService {
     // Não pode promover a si mesmo
     if (promoter.id == target.id) return false;
 
-    // Já tratamos a promoção para ADM MASTER acima.
-    if (newRole == Role.adm && promoter.role != Role.adm) return false;
-
-     // Não pode promover para Admin Reivindicado ou Descolado a menos que o promotor seja ADM
-    if ((newRole == Role.adminReivindicado || newRole == Role.descolado) && promoter.role != Role.admMaster) return false;
+    // Apenas ADM MASTER global pode promover, e não para ADM MASTER
 
     return true;
   }
@@ -133,7 +129,7 @@ class PermissionService {
   // Verificar se o usuário pode convidar outros para o clã
   static bool canInviteToClan(User user, String? clanId) {
     // ADM global ou Líder de Clã (no clã correto) pode convidar
-    if (user.role == Role.adm) return true;
+    if (user.role == Role.admMaster) return true;
     if (user.clanRole == Role.leader && user.clanId == clanId) return true; // Líder do clã pode convidar
     return false;
   }
@@ -217,7 +213,7 @@ class PermissionService {
     }
 
     // Ações para membros de federação (qualquer papel de federação ou ADM MASTER global) - precisa verificar se o usuário está na federação e não é guest
-    if (user.federationId != null || user.role == Role.adm) {
+    if (user.federationId != null || user.role == Role.admMaster) {
        actions.addAll([
         'send_federation_message',
        ]);
@@ -291,13 +287,6 @@ class PermissionService {
          // Não é necessário duplicar as ações de Líder/SubLíder aqui, pois as verificações já tratam Role.admMaster.
       ]);
     }
-      // As ações para Role.adminReivindicado e Role.descolado agora são gerenciadas pela Role.admMaster,
-      // ou pela lógica específica onde esses papéis seriam utilizados (se ainda existirem na lógica de negócio de alguma forma fora do enum Role).
-      if(user.role == Role.descolado) {
-        actions.addAll([
-          // Quais ações descolados podem fazer? Adicionar aqui
-        ]);
-      }
 
 
     Logger.info('Available actions for user ${user.username} (Global: ${user.role}, Clan: ${user.clanRole}, Federation: ${user.federationRole}): $actions');
