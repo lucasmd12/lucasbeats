@@ -93,7 +93,7 @@ class _UserPromotionDialogState extends State<UserPromotionDialog> {
                         shape: BoxShape.circle,
                       ),
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     const Text('Administrador'),
                   ],
                 ),

@@ -1381,14 +1381,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                             trailing: PopupMenuButton<String>(
                               onSelected: (action) => _handleClanMemberAction(clan, member, action, setState), // Passar setState
                               itemBuilder: (context) => <PopupMenuEntry<String>>[
-                                if ((member.clanRole != Role.clanLeader)) // Não pode rebaixar o líder
+                                if (member.clanRole != Role.clanLeader) // Não pode rebaixar o líder
                                    const PopupMenuItem<String>(
                                     value: "promote",
                                     child: Text("Promover"), // Consider promoting to SubLeader first? API logic might handle this.
                                   ),
-                                if ((member.clanRole != Role.clanMember)) // Não pode promover o membro
+                                if (member.clanRole != Role.clanMember) // Não pode promover o membro
  PopupMenuItem<String>( // Add const
-                                    value: "demote",
+                                    value: "demote", // Added const
                                     child: Text("Rebaixar a Membro"),
                                   ),
                                 const PopupMenuItem<String>(
@@ -1802,12 +1802,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                             trailing: PopupMenuButton<String>(
                               onSelected: (action) => _handleFederationMemberAction(federation, member, action, setState), // Passar setState
                               itemBuilder: (context) => <PopupMenuEntry<String>>[
-                                if ((member.federationRole != Role.leader)) // Não pode rebaixar o líder
+                                if (member.federationRole != Role.leader) // Não pode rebaixar o líder
                                   const PopupMenuItem<String>(
                                     value: "promote_leader",
                                     child: Text("Promover a Líder"),
                                   ),
-                                if ((member.federationRole != Role.member)) // Não pode promover o membro
+                                if (member.federationRole != Role.member) // Não pode promover o membro
                                   const PopupMenuItem<String>(
                                     value: "demote",
                                     child: Text("Rebaixar a Membro"),
@@ -1932,8 +1932,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
 
   Color _getRoleColor(Role role) {
     switch (role) {
+      case Role.clanSubLeader: return const Color(0xFFFBC02D); // Cor para SubLíder de Clã
+      case Role.clanLeader: return Colors.red; // Explicitly handle clanLeader
       case Role.admMaster: return Colors.red; // Cor para ADM Master
-      case Role.federationLeader: return Colors.orange; // Cor para Líder de Federação (RESOLVE undefined_enum_constant)
       case Role.leader: return Colors.orange;
       case Role.subLeader: return const Color(0xFFFBC02D);
       case Role.member: return Colors.blue;
