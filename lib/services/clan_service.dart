@@ -138,7 +138,7 @@ class ClanService with ChangeNotifier {
     bool isLeader = currentUser.id == clan.leaderId;
     bool isSubLeader = currentUserRoleInClan == roleToString(Role.subLeader);
 
-    if (!(isLeader || isSubLeader || currentUser.role == Role.adm)) {
+    if (!(isLeader || isSubLeader || currentUser.role == Role.admMaster)) {
       Logger.warning('Permission Denied [Add Member]: Only Leader/SubLeader can add members.');
       return false;
     }
@@ -237,7 +237,7 @@ class ClanService with ChangeNotifier {
  bool isLeader = currentUser.id == clan.leaderId;
  bool isSubLeader = currentUserRoleInClan == roleToString(Role.subLeader);
 
- if (!(isLeader || isSubLeader || currentUser.role == Role.adm)) {
+ if (!(isLeader || isSubLeader || currentUser.role == Role.admMaster)) {
  Logger.warning('Permission Denied [Demote Member]: Only Leader/SubLeader can demote members.');
  return false;
     }
@@ -273,7 +273,7 @@ class ClanService with ChangeNotifier {
     bool isLeader = currentUser.id == clan.leaderId;
     bool isSubLeader = currentUserRoleInClan == roleToString(Role.subLeader);
 
-    if (!(isLeader || isSubLeader || currentUser.role == Role.adm)) {
+    if (!(isLeader || isSubLeader || currentUser.role == Role.admMaster)) {
       Logger.warning('Permission Denied [Update Clan Details]: Only Leader/SubLeader can update details.');
       return null;
     }

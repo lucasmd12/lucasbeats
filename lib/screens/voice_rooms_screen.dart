@@ -140,7 +140,7 @@ class _VoiceRoomsScreenState extends State<VoiceRoomsScreen> with SingleTickerPr
     return Consumer<AuthService>(
       builder: (context, authService, child) {
         final user = authService.currentUser;
-        if (user?.role != Role.adm) {
+        if (user?.role != Role.admMaster) {
           return const Center(
             child: Text('Apenas administradores podem acessar as salas administrativas.'),
           );
@@ -155,7 +155,7 @@ class _VoiceRoomsScreenState extends State<VoiceRoomsScreen> with SingleTickerPr
                 roomType: 'admin',
                 roomNumber: 1, // Assuming admin rooms are numbered
               ),
-               const VoiceRoomWidget( // Second admin room example
+              const VoiceRoomWidget( // Second admin room example
                 roomType: 'admin',
               ),
              const SizedBox(height: 16),

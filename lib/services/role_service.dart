@@ -58,7 +58,7 @@ class RoleService {
       if (response != null) {
         final user = User.fromJson(response);
         // Check role based on the fetched user data
-        final canManage = user.role == Role.federationAdmin || user.role == Role.clanLeader; // Example roles
+        final canManage = user.role == Role.admMaster || user.role == Role.leader; // Example roles
         Logger.info('User $userId can manage roles: $canManage');
         return canManage;
       } else {
@@ -77,8 +77,7 @@ class RoleService {
      try {
       final response = await _apiService.get('/api/users/$userId');
       if (response != null) {
-        final user = User.fromJson(response);
-        final isOwner = user.role == Role.federationAdmin; // Assuming federationAdmin is the 'owner'
+        final user = User.fromJson(response);        final isOwner = user.role == Role.admMaster; // Assuming federationAdmin is the 'owner'
         Logger.info('User $userId is owner: $isOwner');
         return isOwner;
       } else {
