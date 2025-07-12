@@ -83,7 +83,7 @@ class _UserPromotionDialogState extends State<UserPromotionDialog> {
               ),
               DropdownMenuItem(
                 value: Role.federationAdmin,
-                child: Row(
+                child: const Row(
                   children: [
                     Container(
                       width: 12,
@@ -93,7 +93,7 @@ class _UserPromotionDialogState extends State<UserPromotionDialog> {
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     const Text('Administrador'),
                   ],
                 ),
@@ -158,7 +158,7 @@ class _UserPromotionDialogState extends State<UserPromotionDialog> {
         return 'Usuário terá permissões básicas de membro.';
       case Role.clanLeader:
         return 'Usuário poderá gerenciar um clã e seus membros.';
-      case Role.federationAdmin:
+      case Role.admMaster:
         return 'ATENÇÃO: Usuário terá acesso total ao sistema!';
       default:
         return ''; // Aviso vazio para outros papéis
@@ -171,7 +171,7 @@ class _UserPromotionDialogState extends State<UserPromotionDialog> {
         return Colors.grey;
       case Role.clanLeader:
         return Colors.blue;
-      case Role.federationAdmin:
+      case Role.admMaster:
         return Colors.red;
       default:
         return Colors.grey; // Cor padrão

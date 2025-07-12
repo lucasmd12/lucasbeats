@@ -151,13 +151,13 @@ class _VoiceRoomWidgetState extends State<VoiceRoomWidget> {
   bool _canCreateRoom(User user) {
     switch (widget.roomType) {
       case 'clan':
-        return user.role == Role.clanLeader || user.role == Role.adm;
+        return user.role == Role.leader || user.role == Role.admMaster;
       case 'federation':
-        return user.role == Role.clanLeader || user.role == Role.federationAdmin;
+        return user.role == Role.leader || user.role == Role.admMaster;
       case 'global':
         return true; // Qualquer usuário pode criar salas globais
       case 'admin':
-        return user.role == Role.federationAdmin;
+        return user.role == Role.admMaster;
       default:
         return false;
     }
@@ -169,8 +169,8 @@ class _VoiceRoomWidgetState extends State<VoiceRoomWidget> {
         return true; // Membros do clã podem entrar
       case 'federation':
         // Federation leader and members can join federation voice rooms.
-        return user.role == Role.federationAdmin ||
-            user.role == Role.clanLeader || user.role == Role.clanMember;
+        return user.role == Role.admMaster ||
+            user.role == Role.leader || user.role == Role.member;
       case 'global':
         return true; // Qualquer usuário pode entrar
       case 'admin':
