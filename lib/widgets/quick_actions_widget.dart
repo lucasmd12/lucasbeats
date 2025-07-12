@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lucasbeatsfederacao/models/role_model.dart';
-import 'package:lucasbeatsfederacao/screens/admin_panel_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:lucasbeatsfederacao/services/federation_service.dart';
 import '../../widgets/custom_snackbar.dart'; // Assuming the path
@@ -75,8 +74,8 @@ class QuickActionsWidget extends StatelessWidget {
           Colors.red,
           () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
-          ),
+            MaterialPageRoute(builder: (context) => const AdminManageClansScreen()),
+ ),
         ),
         _buildActionButton(
           context,

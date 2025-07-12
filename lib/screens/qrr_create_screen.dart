@@ -56,33 +56,17 @@ class _QRRCreateScreenState extends State<QRRCreateScreen> {
     final user = authProvider.currentUser;
 
     if (user != null) {
-      _canSelectEntity = user.role == Role.admMaster || user.role == Role.admMaster || user.role == Role.clanLeader;
+      _canSelectEntity = user.role == Role.admMaster || user.role == Role.leader || user.role == Role.clanLeader;
 
-      if (!_canSelectEntity && user.clanId != null) {
+      // If the user is not an admin and belongs to a clan, pre-select their clan
+      if (user.role != Role.admMaster && user.clanId != null) {
         // For non-admins with a clan, pre-select their clan
         _selectedEntityType = 'clan';
-        _selectedEntityId = user.clanId;
-        // Attempt to get clan name for display (requires fetching clan details)
-      }
-
+        _selectedEntityId = user.clanId;      }
       if (_canSelectEntity) {
         // For admins, fetch all clans and federations
         _fetchAvailableEntities();
       }
-    }
-  }
-
-  Future<void> _fetchUserClanName(String clanId) async {
- try {
-      final clanService = Provider.of<ClanService>(context, listen: false);
- final clan = await clanService.getClanDetails(clanId);
-      if (mounted) {
- setState(() {
- _userClanName = clan?.name ?? 'Clã Desconhecido';
- });
-      }
-    } catch (e) {
- Logger.error('Erro ao buscar nome do clã do usuário', error: e);
     }
   }
 

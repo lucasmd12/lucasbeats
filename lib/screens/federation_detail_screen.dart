@@ -7,7 +7,6 @@ import 'package:lucasbeatsfederacao/screens/clan_detail_screen.dart';
 import 'package:lucasbeatsfederacao/screens/federation_text_chat_screen.dart';
 import 'package:lucasbeatsfederacao/providers/auth_provider.dart';
 import 'package:lucasbeatsfederacao/models/role_model.dart';
-import 'package:lucasbeatsfederacao/models/user_model.dart';
 import 'package:lucasbeatsfederacao/screens/admin_manage_clans_screen.dart'; // Import AdminManageClansScreen
 
 class FederationDetailScreen extends StatefulWidget {
@@ -20,14 +19,10 @@ class FederationDetailScreen extends StatefulWidget {
 }
 
 class _FederationDetailScreenState extends State<FederationDetailScreen> {
-  User? _currentUser;
-
   @override
   void initState() {
     super.initState();
     // Fetch current user in initState
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    _currentUser = authProvider.currentUser;
   }
 
   @override
