@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucasbeatsfederacao/providers/auth_provider.dart';
+import 'package:lucasbeatsfederacao/models/role_model.dart';
 import 'package:lucasbeatsfederacao/services/clan_service.dart';
 import 'package:lucasbeatsfederacao/services/invite_service.dart';
 import 'package:lucasbeatsfederacao/services/user_service.dart';
@@ -315,7 +316,7 @@ class _MembersTabState extends State<MembersTab> {
           );
         }
 
-        final bool canManageMembers = currentUser?.clanRole == Role.clanLeader || currentUser?.clanRole == Role.clanSubLeader || currentUser?.role == Role.federationAdmin || currentUser?.role == Role.adm;
+        final bool canManageMembers = currentUser?.clanRole == Role.leader || currentUser?.clanRole == Role.subLeader || currentUser?.role == Role.admMaster;
 
         return Column(
           children: [
@@ -396,13 +397,13 @@ class _MembersTabState extends State<MembersTab> {
                   ),
                   _buildStatItem(
                     'Líderes',
-                    '${_members.where((m) => m.role == Role.clanLeader || m.role == Role.clanSubLeader).length}',
+                    '${_members.where((m) => m.role == Role.leader || m.role == Role.subLeader).length}',
                     Colors.orange,
                   ),
                   _buildStatItem(
                     'Membros',
                     '${_members.where((m) => m.role == Role.clanMember).length}',
-                    Colors.blue,
+                    Colors.blue, // Assuming Role.member represents the general clan member
                   ),
                 ],
               ),

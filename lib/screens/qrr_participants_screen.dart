@@ -87,15 +87,12 @@ class _QRRParticipantsScreenState extends State<QRRParticipantsScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final currentUser = authProvider.currentUser;
-    
+
     // Verificar se o usuário tem permissão para gerenciar (ADM, Leader, SubLeader)
     final canManage = currentUser != null && (
-      currentUser.role == Role.adm ||
-      currentUser.role == Role.leader ||
-      currentUser.role == Role.subLeader ||
-      currentUser.role == Role.federationAdmin ||
-      currentUser.role == Role.clanLeader ||
-      currentUser.role == Role.clanSubLeader
+      currentUser.role == Role.admMaster || // Use Role.admMaster for unified admin
+      currentUser.role == Role.leader || // Keep leader
+      currentUser.role == Role.subLeader // Keep subLeader
     );
 
     return Scaffold(
