@@ -149,7 +149,7 @@ class RoleBasedWidget extends StatelessWidget {
         }
 
         switch (user.role) {
-          case Role.adm:
+          case Role.admMaster:
             return adminWidget ?? fallback ?? const SizedBox.shrink();
           case Role.leader:
             return leaderWidget ?? fallback ?? const SizedBox.shrink();
@@ -183,7 +183,7 @@ class RoleBadge extends StatelessWidget {
     String roleText;
 
     switch (user!.role) {
-      case Role.adm:
+      case Role.admMaster:
         badgeColor = Colors.red;
         badgeIcon = Icons.admin_panel_settings;
         roleText = 'ADM';

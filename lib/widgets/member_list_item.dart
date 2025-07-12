@@ -16,7 +16,7 @@ class MemberListItem extends StatelessWidget {
   const MemberListItem({
     super.key,
     required this.member,
-    required this.currentUser,
+    required this.currentUser, 
     required this.onMemberAction,
     this.canManage = false,
   });
@@ -183,7 +183,7 @@ class MemberListItem extends StatelessWidget {
   List<PopupMenuEntry<String>> _buildMenuItems() {
     List<PopupMenuEntry<String>> items = [];
     
-    if (member.role == Role.clanMember) {
+    if (member.role == Role.member) {
       items.add(const PopupMenuItem(
         value: 'promote',
         child: Row(
@@ -196,7 +196,7 @@ class MemberListItem extends StatelessWidget {
       ));
     }
     
-    if (member.role == Role.clanSubLeader) {
+    if (member.role == Role.subLeader) {
       items.add(const PopupMenuItem(
         value: 'demote',
         child: Row(
@@ -236,18 +236,16 @@ class MemberListItem extends StatelessWidget {
 
   Color _getRoleColor(Role role) {
     switch (role) {
-      case Role.federationAdmin:
+      case Role.admMaster:
         return Colors.red;
-      case Role.clanLeader:
+      case Role.leader:
         return Colors.orange;
-      case Role.clanSubLeader:
+      case Role.subLeader:
         return Colors.yellow.shade600;
-      case Role.clanMember:
+      case Role.member:
         return Colors.blue;
       case Role.guest:
         return Colors.grey;
-      case Role.adm:
-        return Colors.purple;
       case Role.user:
         return Colors.teal;
       default:
@@ -258,17 +256,17 @@ class MemberListItem extends StatelessWidget {
   String _getRoleDisplayName(Role role) {
     switch (role) {
       case Role.federationAdmin:
-        return 'ADM FEDERAÇÃO';
-      case Role.clanLeader:
-        return 'LÍDER CLÃ';
-      case Role.clanSubLeader:
-        return 'SUB-LÍDER CLÃ';
-      case Role.clanMember:
-        return 'MEMBRO CLÃ';
+ return 'ADM FEDERAÇÃO'; // Maybe keep for federation view? Need context.
+ case Role.leader:
+ return 'LÍDER';
+ case Role.subLeader:
+ return 'SUB-LÍDER';
+ case Role.member:
+ return 'MEMBRO';
       case Role.guest:
         return 'CONVIDADO';
-      case Role.adm:
-        return 'ADMINISTRADOR';
+ case Role.admMaster:
+ return 'ADMINISTRADOR MASTER';
       case Role.user:
         return 'USUÁRIO';
       default:
